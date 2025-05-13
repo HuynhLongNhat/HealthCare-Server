@@ -30,13 +30,16 @@ module.exports = function (sequelize, DataTypes) {
         unique: "email",
       },
       
-      googleId: { // Thêm cột này
+      googleId: { 
         type: DataTypes.STRING,
         allowNull: true,
         unique: true,
       },
-      
-      
+        facebookId: { 
+        type: DataTypes.STRING,
+        allowNull: true,
+        unique: true,
+      },
       full_name: {
         type: DataTypes.STRING(255),
         allowNull: false,

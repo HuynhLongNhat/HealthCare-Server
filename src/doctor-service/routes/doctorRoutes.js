@@ -654,4 +654,16 @@ router.get("/:doctorId/ratings", doctorController.getDoctorRatings);
 router.put("/ratings/:ratingId", doctorController.updateDoctorRating);
 
 router.delete("/ratings/:ratingId", doctorController.deleteDoctorRating);
+
+
+router.get("/all/handbooks", doctorController.getAllHealthHandBook);
+router.get("/all/handbooks/doctor/:doctorId", doctorController.getAllHealthHandBookByDoctorId);
+
+router.get("/latest/handbooks", doctorController.getLatestHealthHandBooks);
+router.get("/outstanding/handbooks", doctorController.getOutstandingHealthHandBooks);
+
+router.get("/handbooks/:slug", doctorController.getHealthHandBookBySlug);
+router.put("/handbooks/:id", doctorController.updateHealthHandBook);
+router.delete("/handbooks/:slug", doctorController.deleteHealthHandBook);
+router.post("/handbook", doctorController.createHealthHandBook);
 export default router;

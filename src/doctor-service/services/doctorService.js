@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import db from "../models";
 import userApiService from "./userApiService";
+import { raw } from "body-parser";
 class DoctorService {
   // Doctor Management
 
@@ -46,11 +47,11 @@ class DoctorService {
             attributes: ["name", "description", "avatar"],
           },
           {
-            model : db.clinics,
-            as : "clinics"
-          }
+            model: db.clinics,
+            as: "clinics",
+          },
         ],
-      nest : true
+        nest: true,
       });
 
       if (!doctor) {
@@ -90,9 +91,9 @@ class DoctorService {
             attributes: ["name", "description", "avatar"],
           },
           {
-            model : db.clinics,
-            as : "clinics"
-          }
+            model: db.clinics,
+            as: "clinics",
+          },
         ],
       });
 
@@ -135,7 +136,9 @@ class DoctorService {
 
   async getAllDoctorsBySpecialization(specializationId) {
     try {
-      const specialization = await db.specializations.findByPk(specializationId);
+      const specialization = await db.specializations.findByPk(
+        specializationId
+      );
       if (!specialization) {
         return {
           EM: "Không tìm thấy chuyên khoa!",
@@ -143,7 +146,7 @@ class DoctorService {
           DT: [],
         };
       }
-  
+
       // Lấy danh sách bác sĩ có join clinics và specialization
       const doctors = await db.doctors.findAll({
         where: { specialization_id: specializationId },
@@ -160,7 +163,7 @@ class DoctorService {
         ],
         nest: true,
       });
-  
+
       if (!doctors || doctors.length === 0) {
         return {
           EM: "Không có bác sĩ nào trong chuyên khoa này!",
@@ -168,7 +171,7 @@ class DoctorService {
           DT: [],
         };
       }
-  
+
       // Gắn thêm thông tin user từ userApiService
       const doctorsWithUser = await Promise.all(
         doctors.map(async (doctor) => {
@@ -179,7 +182,7 @@ class DoctorService {
           };
         })
       );
-  
+
       return {
         EM: "Lấy danh sách bác sĩ thành công!",
         EC: 0,
@@ -193,8 +196,7 @@ class DoctorService {
       };
     }
   }
-  
-  
+
   async deleteDoctor(id) {
     try {
       const doctor = await db.doctors.findOne({
@@ -269,16 +271,16 @@ class DoctorService {
         avatar: data.avatar,
         doctor_id: data.doctor_id,
       });
-  
+
       if (clinic && data.galleryImages && data.galleryImages.length > 0) {
         const imageData = data.galleryImages.map((url) => ({
-          clinicId: clinic.id, 
+          clinicId: clinic.id,
           imageUrl: url,
         }));
-  
-        await db.clinic_images.bulkCreate(imageData); 
+
+        await db.clinic_images.bulkCreate(imageData);
       }
-  
+
       if (!clinic) {
         return {
           EM: "Tạo mới cơ sở y tế thất bại!",
@@ -286,7 +288,7 @@ class DoctorService {
           DT: [],
         };
       }
-  
+
       return {
         EM: "Tạo mới cơ sở y tế thành công!",
         EC: 0,
@@ -300,85 +302,82 @@ class DoctorService {
       };
     }
   }
-  
 
-async  getAllClinics() {
-  try {
-    const clinics = await db.clinics.findAll({
-      order: [["id", "DESC"]],
-    });
+  async getAllClinics() {
+    try {
+      const clinics = await db.clinics.findAll({
+        order: [["id", "DESC"]],
+      });
 
-    if (!clinics || clinics.length === 0) {
+      if (!clinics || clinics.length === 0) {
+        return {
+          EM: "Lấy danh sách phòng khám thất bại!",
+          EC: -1,
+          DT: [],
+        };
+      }
+
+      const clinicsWithDoctors = await Promise.all(
+        clinics.map(async (clinic) => {
+          const doctor = await this.getDoctorById(clinic.doctor_id);
+          return {
+            ...clinic.toJSON(),
+            doctor,
+          };
+        })
+      );
+
       return {
-        EM: "Lấy danh sách phòng khám thất bại!",
+        EM: "Lấy danh sách phòng khám thành công!",
+        EC: 0,
+        DT: clinicsWithDoctors,
+      };
+    } catch (error) {
+      return {
+        EM: `Lỗi hệ thống: ${error.message}`,
+        EC: -2,
+        DT: [],
+      };
+    }
+  }
+
+  async getClinicById(id) {
+    try {
+      const clinic = await db.clinics.findByPk(id, {
+        include: [
+          {
+            model: db.clinic_images,
+            as: "clinic_images",
+            attributes: ["id", "imageUrl"],
+          },
+        ],
+      });
+
+      if (!clinic) {
+        return {
+          EM: "Không tìm thấy phòng khám",
+          EC: 1,
+          DT: null,
+        };
+      }
+      const doctor = await this.getDoctorById(clinic.doctor_id);
+
+      return {
+        EM: "Lấy phòng khám thành công",
+        EC: 0,
+        DT: {
+          ...clinic.toJSON(),
+          doctor,
+        },
+      };
+    } catch (error) {
+      return {
+        EM: `Lỗi hệ thống: ${error.message}`,
         EC: -1,
         DT: [],
       };
     }
-
-    const clinicsWithDoctors = await Promise.all(
-      clinics.map(async (clinic) => {
-        const doctor = await this.getDoctorById(clinic.doctor_id);
-        return {
-          ...clinic.toJSON(),
-          doctor,
-        };
-      })
-    );
-
-    return {
-      EM: "Lấy danh sách phòng khám thành công!",
-      EC: 0,
-      DT: clinicsWithDoctors,
-    };
-  } catch (error) {
-    return {
-      EM: `Lỗi hệ thống: ${error.message}`,
-      EC: -2,
-      DT: [],
-    };
   }
-}
-
-
-
-async getClinicById(id) {
-  try {
-    const clinic = await db.clinics.findByPk(id, {
-      include: [
-        {
-          model: db.clinic_images,
-          as: 'clinic_images',
-          attributes: ['id', 'imageUrl'],
-        },
-      ],
-    });
-
-    if (!clinic) {
-      return {
-        EM: "Không tìm thấy phòng khám",
-        EC: 1,
-        DT: null,
-      };
-    }
-    const doctor = await this.getDoctorById(clinic.doctor_id);
-
-    return {
-      EM: "Lấy phòng khám thành công",
-      EC: 0,
-      DT: {
-        ...clinic.toJSON(),
-        doctor, 
-      },
-    };
-  } catch (error) {
-    return {
-      EM: `Lỗi hệ thống: ${error.message}`,
-      EC: -1,
-      DT: [],
-    };
-  }
-}
 
   async updateClinic(id, updateData) {
     try {
@@ -390,7 +389,7 @@ async getClinicById(id) {
           DT: [],
         };
       }
-  
+
       // Cập nhật thông tin cơ bản
       await clinic.update({
         name: updateData.name,
@@ -399,23 +398,23 @@ async getClinicById(id) {
         avatar: updateData.avatar,
         doctor_id: updateData.doctor_id,
       });
-  
+
       // Nếu có galleryImages: cập nhật lại toàn bộ ảnh
       if (Array.isArray(updateData.galleryImages)) {
         // Xoá toàn bộ ảnh cũ
         await db.clinic_images.destroy({
           where: { clinicId: id },
         });
-  
+
         // Thêm ảnh mới
         const imageData = updateData.galleryImages.map((url) => ({
           clinicId: id,
           imageUrl: url,
         }));
-  
+
         await db.clinic_images.bulkCreate(imageData);
       }
-  
+
       return {
         EM: "Cập nhật phòng khám thành công",
         EC: 0,
@@ -429,7 +428,6 @@ async getClinicById(id) {
       };
     }
   }
-  
 
   async deleteClinic(id) {
     try {
@@ -520,18 +518,17 @@ async getClinicById(id) {
           DT: [],
         };
       }
-  
+
       const specialization = await db.specializations.findOne({
         where: { id },
         include: [
           {
             model: db.doctors,
             as: "doctors",
-       
           },
         ],
       });
-  
+
       if (!specialization) {
         return {
           EM: "Không tìm thấy chuyên khoa",
@@ -539,7 +536,7 @@ async getClinicById(id) {
           DT: [],
         };
       }
-        const enrichedDoctors = await Promise.all(
+      const enrichedDoctors = await Promise.all(
         specialization.doctors.map(async (doc) => {
           const detail = await userApiService.getUserById(doc.user_id);
           return {
@@ -548,7 +545,7 @@ async getClinicById(id) {
           };
         })
       );
-  
+
       return {
         EM: "Lấy chuyên khoa thành công",
         EC: 0,
@@ -565,7 +562,7 @@ async getClinicById(id) {
       };
     }
   }
-  
+
   async updateSpecialization(id, updateData) {
     try {
       const specialization = await db.specializations.findByPk(id);
@@ -811,20 +808,20 @@ async getClinicById(id) {
       };
     }
   }
- 
+
   async getDoctorSchedulesByClinic(doctorId, clinicId) {
     try {
       const schedules = await db.schedules.findAll({
         where: {
           doctor_id: doctorId,
           clinic_id: clinicId,
-        },  
+        },
         order: [
           ["date", "ASC"],
           ["time_start", "ASC"],
         ],
       });
-  
+
       if (!schedules || schedules.length === 0) {
         return {
           EM: "Không có lịch làm việc nào cho bác sĩ tại phòng khám này",
@@ -832,7 +829,7 @@ async getClinicById(id) {
           DT: [],
         };
       }
-  
+
       return {
         EM: "Lấy danh sách lịch làm việc thành công",
         EC: 0,
@@ -857,32 +854,30 @@ async getClinicById(id) {
           DT: [],
         };
       }
-  
-      // Kiểm tra bác sĩ và cơ sở y tế có tồn tại
       const [doctor, clinic] = await Promise.all([
         db.doctors.findOne({ where: { user_id: doctorId } }),
         db.clinics.findOne({ where: { id: clinicId } }),
       ]);
-  
+
       if (!doctor) {
         return { EM: "Không tìm thấy bác sĩ", EC: -1, DT: [] };
       }
-  
+
       if (!clinic) {
         return { EM: "Không tìm thấy cơ sở y tế", EC: -2, DT: [] };
       }
-  
+
       const createdSchedules = [];
       const skippedSchedules = [];
-  
+
       for (const item of scheduleData) {
         const { date, startTime, endTime } = item;
-  
+
         if (!date || !startTime || !endTime) {
           skippedSchedules.push({ ...item, reason: "Thiếu thông tin" });
           continue;
         }
-  
+
         const isExist = await db.schedules.findOne({
           where: {
             doctor_id: doctorId,
@@ -892,12 +887,12 @@ async getClinicById(id) {
             time_end: endTime,
           },
         });
-  
+
         if (isExist) {
           skippedSchedules.push({ ...item, reason: "Trùng lịch" });
           continue;
         }
-  
+
         const newSchedule = await db.schedules.create({
           doctor_id: doctorId,
           clinic_id: clinicId,
@@ -906,10 +901,10 @@ async getClinicById(id) {
           time_end: endTime,
           status: "AVAILABLE",
         });
-  
+
         createdSchedules.push(newSchedule);
       }
-  
+
       return {
         EM: `Tạo ${createdSchedules.length} lịch thành công, bỏ qua ${skippedSchedules.length} lịch bị trùng hoặc lỗi`,
         EC: 0,
@@ -926,11 +921,9 @@ async getClinicById(id) {
       };
     }
   }
-  
 
   async getDoctorSchedules(doctorId) {
     try {
-      console.log("vào hàm doctor schedule");
       // Kiểm tra bác sĩ tồn tại và lấy thông tin bác sĩ cùng chuyên môn
       const doctor = await db.doctor_details.findOne({
         where: { doctor_id: doctorId },
@@ -1080,10 +1073,11 @@ async getClinicById(id) {
   }
 
   async updateSchedule(doctorId, scheduleId, updateData) {
+    console.log("updateData", updateData);
     try {
-      const schedule = await db.doctor_schedules.findOne({
+      const schedule = await db.schedules.findOne({
         where: {
-          schedule_id: scheduleId,
+          id: scheduleId,
           doctor_id: doctorId,
         },
       });
@@ -1095,42 +1089,86 @@ async getClinicById(id) {
           DT: [],
         };
       }
-      // Nếu lịch đã BOOKED, không cho phép cập nhật thời gian
+
+      // Prevent updating time for BOOKED schedules
       if (
         schedule.status === "BOOKED" &&
-        (updateData.schedule_date ||
-          updateData.start_time ||
-          updateData.end_time)
+        (updateData.date || updateData.time_start || updateData.time_end)
       ) {
         return {
-          EM: "Lịch hẹn đã được đặt không thể cập nhật",
-          EC: -4,
+          EM: "Lịch hẹn đã được đặt không thể cập nhật thời gian",
+          EC: -2,
           DT: [],
         };
       }
 
-      // Cập nhật lịch
-      await schedule.update({
-        schedule_date: updateData.schedule_date || schedule.schedule_date,
-        start_time: updateData.start_time || schedule.start_time,
-        end_time: updateData.end_time || schedule.end_time,
+      // Check for time conflicts with the same doctor's other schedules
+      if (updateData.date || updateData.time_start || updateData.time_end) {
+        const newDate = updateData.date || schedule.date;
+        const newStartTime = updateData.time_start || schedule.time_start;
+        const newEndTime = updateData.time_end || schedule.time_end;
+
+        // Convert times to minutes for easier comparison
+        const toMinutes = (timeStr) => {
+          const [hours, minutes] = timeStr.split(":").map(Number);
+          return hours * 60 + minutes;
+        };
+
+        const newStart = toMinutes(newStartTime);
+        const newEnd = toMinutes(newEndTime);
+
+        // Find all schedules for this doctor on the same day (excluding current schedule)
+        const sameDaySchedules = await db.schedules.findAll({
+          where: {
+            doctor_id: doctorId,
+            date: newDate,
+            id: { [db.Sequelize.Op.ne]: scheduleId },
+          },
+        });
+
+        // Check for overlapping time slots
+        const hasConflict = sameDaySchedules.some((existingSchedule) => {
+          const existingStart = toMinutes(existingSchedule.time_start);
+          const existingEnd = toMinutes(existingSchedule.time_end);
+
+          return (
+            (newStart >= existingStart && newStart < existingEnd) ||
+            (newEnd > existingStart && newEnd <= existingEnd) ||
+            (newStart <= existingStart && newEnd >= existingEnd)
+          );
+        });
+
+        if (hasConflict) {
+          return {
+            EM: "Bác sĩ đã có lịch khám trong khoảng thời gian này",
+            EC: -3,
+            DT: [],
+          };
+        }
+      }
+
+      // Update the schedule
+      const updatedSchedule = await schedule.update({
+        date: updateData.date || schedule.date,
+        time_start: updateData.time_start || schedule.time_start,
+        time_end: updateData.time_end || schedule.time_end,
         status: updateData.status || schedule.status,
       });
 
       return {
-        EM: "Lịch hẹn đã được cập nhật thành công!",
+        EM: "Cập nhật lịch hẹn thành công!",
         EC: 0,
-        DT: schedule,
+        DT: updatedSchedule,
       };
     } catch (error) {
+      console.error("Error updating schedule:", error);
       return {
-        EM: `Error updating schedule: ${error.message}`,
-        EC: -1,
+        EM: `Lỗi hệ thống: ${error.message}`,
+        EC: -4,
         DT: [],
       };
     }
   }
-
   async deleteSchedule(doctorId, scheduleId) {
     try {
       const schedule = await db.doctor_schedules.findOne({
@@ -1172,59 +1210,58 @@ async getClinicById(id) {
     }
   }
 
-  
-async updateDoctorScheduleById(scheduleId, updateData) {
-  try {
-    const schedule = await db.schedules.findByPk(scheduleId);
-    if (!schedule) {
+  async updateDoctorScheduleById(scheduleId, updateData) {
+    try {
+      const schedule = await db.schedules.findByPk(scheduleId);
+      if (!schedule) {
+        return {
+          EM: "Không tìm thấy lịch hẹn",
+          EC: -1,
+          DT: [],
+        };
+      }
+
+      await schedule.update(updateData);
       return {
-        EM: "Không tìm thấy lịch hẹn",
+        EM: "Cập nhật lịch hẹn thành công",
+        EC: 0,
+        DT: schedule,
+      };
+    } catch (error) {
+      return {
+        EM: `Lỗi hệ thống: ${error.message}`,
         EC: -1,
         DT: [],
       };
     }
-
-    await schedule.update(updateData);
-    return {
-      EM: "Cập nhật lịch hẹn thành công",
-      EC: 0,
-      DT: schedule,
-    };
-  } catch (error) {
-    return {
-      EM: `Lỗi hệ thống: ${error.message}`,
-      EC: -1,
-      DT: [],
-    };
   }
-}
 
-async deleteDoctorScheduleById(scheduleId) {
-  try {
-    const schedule = await db.schedules.findByPk(scheduleId);
-    if (!schedule) {
+  async deleteDoctorScheduleById(scheduleId) {
+    try {
+      const schedule = await db.schedules.findByPk(scheduleId);
+      if (!schedule) {
+        return {
+          EM: "Không tìm thấy lịch làm việc",
+          EC: -1,
+          DT: [],
+        };
+      }
+
+      await schedule.destroy();
       return {
-        EM: "Không tìm thấy lịch làm việc",
+        EM: "Xóa lịch làm việc thành công",
+        EC: 0,
+        DT: [],
+      };
+    } catch (error) {
+      return {
+        EM: `Lỗi hệ thống: ${error.message}`,
         EC: -1,
         DT: [],
       };
     }
+  }
 
-    await schedule.destroy();
-    return {
-      EM: "Xóa lịch làm việc thành công",
-      EC: 0,
-      DT: [],
-    };
-  } catch (error) {
-    return {
-      EM: `Lỗi hệ thống: ${error.message}`,
-      EC: -1,
-      DT: [],
-    };
-  }
-  }
-  
   async createDoctorRating(data) {
     try {
       const {
@@ -1233,13 +1270,15 @@ async deleteDoctorScheduleById(scheduleId) {
         professionalism_rating,
         attitude_rating,
         price_rating,
-        comment
+        comment,
       } = data;
-        const doctor = await db.doctors.findOne({ where: { user_id: doctor_id } });
+      const doctor = await db.doctors.findOne({
+        where: { user_id: doctor_id },
+      });
       if (!doctor) {
         return { EM: "Không tìm thấy bác sĩ", EC: -1, DT: [] };
       }
-        const newRating = await db.doctor_rating.create({
+      const newRating = await db.doctor_rating.create({
         doctor_id,
         patient_id,
         professionalism_rating,
@@ -1247,7 +1286,7 @@ async deleteDoctorScheduleById(scheduleId) {
         price_rating,
         comment,
       });
-  
+
       return {
         EM: "Tạo đánh giá thành công",
         EC: 0,
@@ -1261,17 +1300,16 @@ async deleteDoctorScheduleById(scheduleId) {
       };
     }
   }
-  
+
   async getDoctorRatings(doctorId) {
     try {
       const ratings = await db.doctor_rating.findAll({
         where: { doctor_id: doctorId },
         order: [["createdAt", "DESC"]],
       });
-        const ratingsWithPatientInfo = [];
+      const ratingsWithPatientInfo = [];
       for (let rating of ratings) {
-        
-        const patientInfo = await userApiService.getUserById(rating.patient_id); 
+        const patientInfo = await userApiService.getUserById(rating.patient_id);
         ratingsWithPatientInfo.push({
           rating,
           userData: patientInfo.userData,
@@ -1280,7 +1318,7 @@ async deleteDoctorScheduleById(scheduleId) {
       return {
         EM: "Lấy danh sách đánh giá thành công",
         EC: 0,
-        DT: ratingsWithPatientInfo, 
+        DT: ratingsWithPatientInfo,
       };
     } catch (error) {
       return {
@@ -1290,17 +1328,16 @@ async deleteDoctorScheduleById(scheduleId) {
       };
     }
   }
-  
-  
+
   async updateDoctorRating(ratingId, updateData) {
     try {
       const rating = await db.doctor_rating.findByPk(ratingId);
       if (!rating) {
         return { EM: "Không tìm thấy đánh giá", EC: -1, DT: [] };
       }
-  
+
       await rating.update(updateData);
-  
+
       return {
         EM: "Cập nhật đánh giá thành công",
         EC: 0,
@@ -1314,16 +1351,16 @@ async deleteDoctorScheduleById(scheduleId) {
       };
     }
   }
-  
+
   async deleteDoctorRating(ratingId) {
     try {
       const rating = await db.doctor_rating.findByPk(ratingId);
       if (!rating) {
         return { EM: "Không tìm thấy đánh giá", EC: -1, DT: [] };
       }
-  
+
       await rating.destroy();
-  
+
       return {
         EM: "Xóa đánh giá thành công",
         EC: 0,
@@ -1337,7 +1374,247 @@ async deleteDoctorScheduleById(scheduleId) {
       };
     }
   }
+  async getAllHealthHandBook() {
+    try {
+      const handbooks = await db.health_handbook.findAll({
+        order: [["createdAt", "DESC"]],
+        raw: true,
+        nest : true
+      });      
+      const handbookWithDoctors = await Promise.all(
+        handbooks.map(async (handbook) => {
+          const doctor = await this.getDoctorById(handbook.author_id);
+          return {
+            handbook,
+            doctor,
+          };
+        })
+      );
+      return {
+        EM: "Lấy danh sách cẩm nang thành công",
+        EC: 0,
+        DT: handbookWithDoctors,
+      };
+    } catch (error) {
+      return {
+        EM: `Lỗi hệ thống: ${error.message}`,
+        EC: -1,
+        DT: [],
+      };
+    }
+  }
+async getAllHealthHandBookByDoctorId(doctorId) {
+  try {
+    const handbooks = await db.health_handbook.findAll({
+      where: { author_id: doctorId },
+      order: [["createdAt", "DESC"]],
+      raw: true,
+    });
+    const { userData } = await userApiService.getUserById(doctorId);
+    const result = handbooks.map((handbook) => ({
+      handbook,
+      userData,
+    }));
+    return {
+      EM: "Lấy danh sách cẩm nang theo bác sĩ thành công",
+      EC: 0,
+      DT: result,
+    };
+  } catch (error) {
+    return {
+      EM: `Lỗi hệ thống: ${error.message}`,
+      EC: -1,
+      DT: [],
+    };
+  }
+}
+async getHealthHandBookBySlug(slug) {
+  try {
+    // Tìm handbook trước
+    const handbook = await db.health_handbook.findOne({
+      where: { slug: slug },
+      raw: true,
+      nest: true,
+    });
+
+    if (!handbook) {
+      return {
+        EM: "Không tìm thấy cẩm nang",
+        EC: -1,
+        DT: [],
+      };
+    }
+
+    // Tăng view_count bằng cách update trực tiếp
+    await db.health_handbook.update(
+      { view_count: db.sequelize.literal('view_count + 1') },
+      { where: { slug: slug } }
+    );
+
+    // Lấy thông tin user
+    const { userData } = await userApiService.getUserById(handbook.author_id);
+
+    // Tạo kết quả trả về (cần lấy lại handbook để có view_count mới nhất)
+    const updatedHandbook = await db.health_handbook.findOne({
+      where: { slug: slug },
+      raw: true,
+      nest: true,
+    });
+
+    const result = {
+      ...updatedHandbook,
+      userData,
+    };
+
+    return {
+      EM: "Lấy chi tiết cẩm nang thành công",
+      EC: 0,
+      DT: result, 
+    };
+  } catch (error) {
+    return {
+      EM: `Lỗi hệ thống: ${error.message}`,
+      EC: -1,
+      DT: [],
+    };
+  }
+}
+async getLatestHealthHandBooks(limit = 20) {
+  try {
+    const handbooks = await db.health_handbook.findAll({
+      order: [["createdAt", "DESC"]],
+      limit,
+      raw: true,
+      nest: true,
+    });
+    const handbookWithDoctors = await Promise.all(
+      handbooks.map(async (handbook) => {
+        const doctor = await this.getDoctorById(handbook.author_id);
+        return {
+          handbook,
+          doctor,
+        };
+      })
+    );
+    return {
+      EM: "Lấy cẩm nang mới nhất thành công",
+      EC: 0,
+      DT: handbookWithDoctors,
+    };
+  } catch (error) {
+    return {
+      EM: `Lỗi hệ thống: ${error.message}`,
+      EC: -1,
+      DT: [],
+    };
+  }
+  }
+  
+  async getOutstandingHealthHandBooks(limit = 4) {
+  try {
+    const handbooks = await db.health_handbook.findAll({
+      order: [["view_count", "DESC"]],
+      limit,
+      raw: true,
+      nest: true,
+    });
+    const handbookWithDoctors = await Promise.all(
+      handbooks.map(async (handbook) => {
+        const doctor = await this.getDoctorById(handbook.author_id);
+        return {
+          handbook,
+          doctor,
+        };
+      })
+    );
+    return {
+      EM: "Lấy cẩm nang mới nhất thành công",
+      EC: 0,
+      DT: handbookWithDoctors,
+    };
+  } catch (error) {
+    return {
+      EM: `Lỗi hệ thống: ${error.message}`,
+      EC: -1,
+      DT: [],
+    };
+  }
+}
+  async updateHealthHandBook(id, updateData) {
+  try {
+    const handbook = await db.health_handbook.findOne({
+        where: { user_id: doctorData.id },
+      });
+    if (!handbook) {
+      return {
+        EM: "Không tìm thấy cẩm nang",
+        EC: -1,
+        DT: null,
+      };
+    }
+    await handbook.update(updateData);
+    return {
+      EM: "Cập nhật cẩm nang thành công",
+      EC: 0,
+      DT: handbook,
+    };
+  } catch (error) {
+    return {
+      EM: `Lỗi hệ thống: ${error.message}`,
+      EC: -1,
+      DT: null,
+    };
+  }
 }
 
+// Xóa handbook
+async deleteHealthHandBook(id) {
+  try {
+    const handbook = await db.health_handbook.findByPk(id);
+    if (!handbook) {
+      return {
+        EM: "Không tìm thấy cẩm nang",
+        EC: -1,
+        DT: null,
+      };
+    }
+    await handbook.destroy();
+    return {
+      EM: "Xóa cẩm nang thành công",
+      EC: 0,
+      DT: null,
+    };
+  } catch (error) {
+    return {
+      EM: `Lỗi hệ thống: ${error.message}`,
+      EC: -1,
+      DT: null,
+    };
+  }
+  }
+  async createHealthHandBook(data) {
+    const { title, slug, content, avatar, author_id } = data;
+  try {
+    const newHandbook = await db.health_handbook.create({
+      title,
+      slug,
+      content,
+      avatar,
+      author_id
+    });
+    return {
+      EM: "Tạo cẩm nang thành công",
+      EC: 0,
+      DT: newHandbook,
+    };
+  } catch (error) {
+    return {
+      EM: `Lỗi hệ thống: ${error.message}`,
+      EC: -1,
+      DT: null,
+    };
+  }
+}
+}
 
 export default new DoctorService();

@@ -53,7 +53,7 @@ app.use((req, res) => {
 
 // Start server
 app.listen(APPOINTMENT_SERVICE_PORT, () => {
-  console.log(`Doctor service is running on port ${APPOINTMENT_SERVICE_PORT}`);
+  console.log(`Appointment service is running on port ${APPOINTMENT_SERVICE_PORT}`);
   console.log(
     `Swagger UI available at http://localhost:${APPOINTMENT_SERVICE_PORT}/api-docs`
   );

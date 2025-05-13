@@ -1,7 +1,9 @@
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const db = require("../models/index"); // Import models
-const jwt = require("jsonwebtoken");
+const FacebookStrategy = require('passport-facebook').Strategy;
+
+const db = require("../models/index");
+const { Op } = require("sequelize");
 
 passport.use(
   new GoogleStrategy(
@@ -9,28 +11,53 @@ passport.use(
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: `${process.env.BASE_URL}/api/auth/google/callback`,
+      passReqToCallback: true,
     },
-    async (accessToken, refreshToken, profile, done) => {
+    async (req, accessToken, refreshToken, profile, done) => {
       try {
-        // Kiểm tra xem người dùng đã tồn tại chưa
-        let user = await db.users.findOne({ where: { googleId: profile.id } });
+        
+        // Check if user already exists
+        let user = await db.users.findOne({ 
+          where: { 
+            googleId: profile.id 
+          } 
+        });
+        if (!user && profile.emails && profile.emails.length > 0) {
+          user = await db.users.findOne({ 
+            where: { 
+              email: profile.emails[0].value 
+            } 
+          });
+          
+          // If found by email but no googleId, update the user
+          if (user && !user.googleId) {
+            user.googleId = profile.id;
+            await user.save();
+          }
+        }
 
+        // If still not found, create a new user
         if (!user) {
-          // Nếu chưa tồn tại, tạo người dùng mới
+          const email = profile.emails && profile.emails.length > 0 
+            ? profile.emails[0].value 
+            : `${profile.id}@google.com`;
+            
+          const photoUrl = profile.photos && profile.photos.length > 0
+            ? profile.photos[0].value
+            : null;
           user = await db.users.create({
             googleId: profile.id,
-            email: profile.emails[0].value,
+            email: email,
             full_name: profile.displayName,
-            profile_picture: profile.photos[0].value,
+            profile_picture: photoUrl,
             is_verified: true,
-            role_id: 3,
-            uuid: require("uuid").v4(), // Tạo UUID ngẫu nhiên
-            username: `google_${profile.id}`, // Tạo username mặc định
-            password: null, // Không cần mật khẩu cho người dùng Google
+            role_id: 3, 
+            uuid: require("uuid").v4(),
+            username: `google_${profile.id}`,
+            password: null,
           });
         }
 
-        // Trả về người dùng
         return done(null, user);
       } catch (error) {
         console.error("Google OAuth Error:", error);
@@ -40,16 +67,57 @@ passport.use(
   )
 );
 
-// Serialize user (lưu trữ user ID vào session)
+passport.use(new FacebookStrategy({
+    clientID: process.env.FACEBOOK_APP_ID,
+    clientSecret: process.env.FACEBOOK_APP_SECRET,
+    callbackURL: `${process.env.BASE_URL}/api/auth/facebook/callback`,
+    profileFields: ['id', 'emails', 'name', 'displayName', 'photos']
+  },
+  async (accessToken, refreshToken, profile, done) => {
+    try {
+      let user = await db.users.findOne({
+        where: {
+          [Op.or]: [
+            { facebookId: profile.id },
+            { email: profile.emails[0].value }
+          ]
+        }
+      });
+
+      if (!user) {
+        user = await db.users.create({
+          facebookId: profile.id,
+          email: profile.emails[0].value,
+          full_name: profile.displayName,
+          profile_picture: profile.photos[0].value,
+          is_verified: true,
+          role_id: 3,
+          uuid: require("uuid").v4(),
+          username: `fb_${profile.id}`,
+          password: null
+        });
+      } else if (!user.facebookId) {
+        user.facebookId = profile.id;
+        await user.save();
+      }
+
+      return done(null, user);
+    } catch (error) {
+      return done(error, null);
+    }
+  }
+));
+
+// Serialize user
 passport.serializeUser((user, done) => {
-  done(null, user.id); // Chỉ lưu trữ user ID
+  done(null, user.id);
 });
 
-// Deserialize user (lấy lại thông tin user từ ID trong session)
+// Deserialize user
 passport.deserializeUser(async (id, done) => {
   try {
-    const user = await db.users.findByPk(id); // Tìm user theo ID
-    done(null, user); // Trả về đối tượng user
+    const user = await db.users.findByPk(id);
+    done(null, user);
   } catch (error) {
     done(error, null);
   }

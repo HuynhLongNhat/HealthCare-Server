@@ -10,17 +10,17 @@ class UserService {
   async register(userData) {
     const transaction = await db.sequelize.transaction();
     try {
-      const { username, email, password, full_name, phone_number } = userData;
+      const { username, email, password, full_name } = userData;
       const existingUser = await db.users.findOne({
         where: {
-          [Op.or]: [{ email }, { username }, { phone_number }],
+          [Op.or]: [{ email }, { username }],
         },
         transaction,
       });
 
       if (existingUser) {
         return {
-          EM: "Email, username or phone number is existing!",
+          EM: "Email, username is existing!",
           EC: -1,
           DT: [],
         };
@@ -38,7 +38,6 @@ class UserService {
           password: hashedPassword,
           role_id: 3,
           full_name,
-          phone_number,
           isVerified: false,
         },
         { transaction }
@@ -199,9 +198,10 @@ class UserService {
       const accessToken = jwt.sign(
         {
           email: user.email,
+          full_name : user.full_name,
           role: user.role_id,
           userId: user.id,
-          avatar : user.profile_picture,
+          avatar: user.profile_picture,
         },
         process.env.JWT_SECRET
       );
@@ -215,7 +215,7 @@ class UserService {
             email: user.email,
             role: user.role_id,
             userId: user.id,
-            avatar : user.profile_picture,
+            avatar: user.profile_picture,
           },
         },
       };
@@ -394,6 +394,28 @@ class UserService {
           DT: [],
         };
       }
+
+      // Kiểm tra trùng số điện thoại
+      if (
+        profileData.phone_number &&
+        profileData.phone_number !== userProfile.phone_number
+      ) {
+        const existingPhone = await db.users.findOne({
+          where: {
+            phone_number: profileData.phone_number,
+            id: { [db.Sequelize.Op.ne]: userId },
+          },
+        });
+
+        if (existingPhone) {
+          return {
+            EM: "Số điện thoại đã được sử dụng bởi người dùng khác!",
+            EC: -2,
+            DT: [],
+          };
+        }
+      }
+
       let userUpdate = await userProfile.update(profileData);
       if (!userUpdate) {
         return {
