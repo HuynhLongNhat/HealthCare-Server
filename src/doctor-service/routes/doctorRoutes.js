@@ -587,7 +587,7 @@ router.get(
  */
 router.get("/:doctorId/schedules", doctorController.getDoctorSchedules);
 
-router.get("/:doctorId/clinic/:clinicId/schedules", doctorController.getDoctorSchedulesByClinic);
+router.get("/:doctorId/clinic/:clinicId/schedules/:timeRange", doctorController.getDoctorSchedulesByClinic);
 
 /**
  * @swagger
@@ -639,10 +639,6 @@ router.delete(
   doctorController.deleteSchedule
 );
 
-router.put("/schedules/:scheduleId", doctorController.updateDoctorScheduleById);
-
-// Xóa lịch hẹn theo ID
-router.delete("/schedules/:scheduleId", doctorController.deleteDoctorScheduleById);
 
 router.get("/specializations/:specializationId/doctors", doctorController.getAllDoctorsBySpecialization);
 
@@ -663,7 +659,15 @@ router.get("/latest/handbooks", doctorController.getLatestHealthHandBooks);
 router.get("/outstanding/handbooks", doctorController.getOutstandingHealthHandBooks);
 
 router.get("/handbooks/:slug", doctorController.getHealthHandBookBySlug);
-router.put("/handbooks/:id", doctorController.updateHealthHandBook);
-router.delete("/handbooks/:slug", doctorController.deleteHealthHandBook);
+router.put("/handbooks/:slug", doctorController.updateHealthHandBook);
+router.delete("/handbooks/:id", doctorController.deleteHealthHandBook);
 router.post("/handbook", doctorController.createHealthHandBook);
+
+router.post("/meetings/doctor/:doctorId", doctorController.createNewMeeting);
+router.get("/meetings/doctor/:doctorId", doctorController.getAllMeetingByDoctor);
+router.delete("/meetings/:meetingId", doctorController.deleteMeeting);
+
+
+
+
 export default router;

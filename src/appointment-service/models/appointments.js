@@ -1,53 +1,41 @@
-const Sequelize = require('sequelize');
-module.exports = function(sequelize, DataTypes) {
+const Sequelize = require("sequelize");
+module.exports = function (sequelize, DataTypes) {
   const appointments = sequelize.define(
     "appointments",
     {
-      appointment_id: {
-        type: DataTypes.STRING(36),
+      id: {
+        autoIncrement: true,
+        type: DataTypes.INTEGER,
         allowNull: false,
         primaryKey: true,
       },
       patient_id: {
-        type: DataTypes.STRING(36),
-        allowNull: true,
+        type: DataTypes.INTEGER,
+        allowNull: false,
       },
       doctor_id: {
-        type: DataTypes.STRING(36),
-        allowNull: true,
-      },
-      appointment_date: {
-        type: DataTypes.DATEONLY,
+        type: DataTypes.INTEGER,
         allowNull: false,
       },
-
-      note: {
-        type: DataTypes.STRING(36),
+      schedule_id: {
+        type: DataTypes.INTEGER,
         allowNull: false,
       },
-      start_time: {
-        type: DataTypes.TIME,
-        allowNull: false,
-      },
-      end_time: {
-        type: DataTypes.TIME,
+      clinic_id: {
+        type: DataTypes.INTEGER,
         allowNull: false,
       },
       booking_time: {
         type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: Sequelize.Sequelize.literal("CURRENT_TIMESTAMP"),
-      },
-      approval_time  :{
-          type: DataTypes.DATE,
         allowNull: true,
+        defaultValue: Sequelize.Sequelize.literal("CURRENT_TIMESTAMP"),
       },
       cancellation_time: {
         type: DataTypes.DATE,
         allowNull: true,
       },
       cancellation_reason: {
-        type: DataTypes.STRING(255),
+        type: DataTypes.TEXT,
         allowNull: true,
       },
       rejection_time: {
@@ -55,43 +43,58 @@ module.exports = function(sequelize, DataTypes) {
         allowNull: true,
       },
       rejection_reason: {
-        type: DataTypes.STRING(255),
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      medical_examination_reason: {
+        type: DataTypes.TEXT,
         allowNull: true,
       },
       status_id: {
-        type: DataTypes.TINYINT,
-        allowNull: false,
+        type: DataTypes.INTEGER,
+        allowNull: true,
         references: {
           model: "appointment_status",
-          key: "status_id",
+          key: "id",
         },
+      },
+      approval_time: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      note: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+      },
+      payment_method: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
       },
     },
     {
       sequelize,
       tableName: "appointments",
-      timestamps: false,
+      timestamps: true,
       indexes: [
         {
           name: "PRIMARY",
           unique: true,
           using: "BTREE",
-          fields: [{ name: "appointment_id" }],
+          fields: [{ name: "id" }],
         },
         {
-          name: "status_id",
+          name: "fk_status_id",
           using: "BTREE",
           fields: [{ name: "status_id" }],
         },
       ],
     }
   );
-  appointments.associate = (models) =>{
-      appointments.belongsTo(models.appointment_status, {
-        as: "status",
-        foreignKey: "status_id",
-      });
-
+  appointments.associate = (models) => {
+    appointments.belongsTo(models.appointment_status, {
+      as: "status",
+      foreignKey: "status_id",
+    });
   };
   return appointments;
 };

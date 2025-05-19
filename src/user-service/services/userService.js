@@ -198,6 +198,7 @@ class UserService {
       const accessToken = jwt.sign(
         {
           email: user.email,
+          username : user.username,
           full_name : user.full_name,
           role: user.role_id,
           userId: user.id,

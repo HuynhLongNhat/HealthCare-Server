@@ -15,7 +15,8 @@ const generateToken = (user) => {
       avatar: user.profile_picture,
       full_name : user.full_name,
       facebookId: user?.facebookId,
-      googleId: user?.googleId
+      googleId: user?.googleId,
+      username :user?.username
       
     },
     process.env.JWT_SECRET,

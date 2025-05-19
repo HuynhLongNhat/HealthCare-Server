@@ -1,79 +1,124 @@
 import db from "../models";
 import doctorApiService from "./doctorApiService";
 import userApiService from "./userApiService";
-import { v4 as uuidv4 } from "uuid";
 import emailService from "../../email-service/emailService";
-const createAppointment = async (
-  patient_id,
-  doctor_id,
-  appointment_date,
-  note,
-  start_time,
-  end_time
-) => {
-  const doctorResponse = await doctorApiService.getDoctorById(doctor_id);
-  if (!doctorResponse) {
-    return {
-      EM: "Không tìm thấy bác sĩ",
-      EC: -2,
-      DT: "",
-    };
-  }
-  if (new Date(appointment_date + " " + start_time) < new Date()) {
-    return {
-      EM: "Ngày đặt lịch phải lớn hơn ngày hiện tại",
-      EC: -3,
-      DT: "",
-    };
-  }
-  const newAppointment = await db.appointments.create({
-    appointment_id: uuidv4(),
-    patient_id: patient_id,
-    doctor_id: doctor_id,
-    appointment_date: appointment_date,
-    note: note,
-    start_time: start_time,
-    end_time: end_time,
-    booking_time: new Date(),
-    status_id: 1,
-  });
-   const patientResponse = await userApiService.getUserById(patient_id);
-  if (newAppointment) {
-    try {
-      await emailService.sendAppointmentConfirmationEmail(
-       patientResponse.userData.email,
-        await getAppointmentDetail(newAppointment.appointment_id)
-      );
-    } catch (error) {
-      console.error("Error sending confirmation email:", error);
+import clinicApi from "../services/clinicApi";
+import scheduleApi from "./scheduleApi";
+import paymentApiService from "./paymentApiService";
+const PayOS = require("@payos/node");
+const payos = new PayOS(
+  process.env.PAYOS_CLIENT_ID,
+  process.env.PAYOS_API_KEY,
+  process.env.PAYOS_CHECKSUM_KEY
+);
+
+const createAppointment = async (data) => {
+  try {
+    // Kiểm tra bác sĩ
+    const doctorResponse = await doctorApiService.getDoctorById(data.doctor_id);
+    if (!doctorResponse) {
+      return {
+        EM: "Không tìm thấy bác sĩ",
+        EC: -1,
+        DT: "",
+      };
     }
 
+    // Kiểm tra bệnh nhân
+    const patientResponse = await userApiService.getUserById(data.patient_id);
+    if (!patientResponse) {
+      return {
+        EM: "Không tìm thấy bệnh nhân",
+        EC: -2,
+        DT: "",
+      };
+    }
+
+    const existingAppointment = await db.appointments.findOne({
+      where: {
+        patient_id: data.patient_id,
+        schedule_id: data.schedule_id,
+        status_id: [1, 2],
+      },
+    });
+
+    if (existingAppointment) {
+      return {
+        EM: "Bạn đã đặt lịch khám này rồi. Vui lòng kiểm tra lại lịch hẹn của bạn.",
+        EC: -4,
+        DT: existingAppointment,
+      };
+    }
+
+    // Tạo lịch hẹn mới
+    const newAppointment = await db.appointments.create({
+      patient_id: data.patient_id,
+      doctor_id: data.doctor_id,
+      schedule_id: data.schedule_id,
+      clinic_id: data.clinic_id,
+      medical_examination_reason: data.medical_examination_reason,
+      booking_time: data.booking_time,
+      payment_method: data.payment_method,
+      status_id: 1, 
+    });
+
+     await scheduleApi.updateStatusSchedule(data.doctor_id, data.schedule_id, { status: "BOOKED" });
+
+
+    if (newAppointment) {
+      try {
+        // Gửi email xác nhận cho bệnh nhân
+        await emailService.sendAppointmentConfirmationEmail(
+          patientResponse.userData.email,
+          await getAppointmentDetail(newAppointment.id),
+          false
+        );
+
+        // Gửi thông báo cho bác sĩ
+        await emailService.sendAppointmentConfirmationEmail(
+          doctorResponse.doctorData.userData.email,
+          await getAppointmentDetail(newAppointment.id),
+          true
+        );
+      } catch (error) {
+        console.error("Error sending confirmation email:", error);
+        // Vẫn trả về thành công dù gửi email lỗi
+      }
+
+      return {
+        EM: "Đặt lịch thành công!",
+        EC: 0,
+        DT: newAppointment,
+      };
+    } else {
+      return {
+        EM: "Đặt lịch thất bại!",
+        EC: -3,
+        DT: "",
+      };
+    }
+  } catch (error) {
+    console.error("Error creating appointment:", error);
     return {
-      EM: "Đặt lịch thành công!",
-      EC: 0,
-      DT: newAppointment,
-    };
-  } else {
-    return {
-      EM: "Đặt lịch thất bại!",
-      EC: -1,
+      EM: "Có lỗi xảy ra khi đặt lịch. Vui lòng thử lại sau.",
+      EC: -5,
       DT: "",
     };
   }
 };
-
-const getAllAppointments = async (role, userId) => {
+const getAllAppointments = async (userId) => {
   try {
-    let whereCondition = {};
-    if (role === "PATIENT") {
+    // Lấy thông tin người dùng để xác định vai trò
+    const { userData } = await userApiService.getUserById(userId);
+
+    const whereCondition = {};
+    if (userData.role_id === 3) {
       whereCondition.patient_id = userId;
-    } else if (role === "DOCTOR") {
+    } else if (userData.role_id === 2) {
       whereCondition.doctor_id = userId;
     }
-
     const appointments = await db.appointments.findAll({
       where: whereCondition,
-      attributes: { exclude: ["status_id"] },
       include: [
         {
           model: db.appointment_status,
@@ -83,78 +128,39 @@ const getAllAppointments = async (role, userId) => {
       ],
       raw: true,
       nest: true,
+      order: [["createdAt", "DESC"]]
+
     });
 
-    // Lấy thông tin chi tiết cho từng lịch hẹn
     const appointmentsWithDetails = await Promise.all(
       appointments.map(async (appointment) => {
         try {
-          const [doctorInfo, patientInfo] = await Promise.all([
-            doctorApiService.getDoctorById(appointment.doctor_id),
-            userApiService.getUserById(appointment.patient_id),
-          ]);
+          const [doctorInfo, patientInfo, clinicInfo, scheduleInfo] =
+            await Promise.all([
+              doctorApiService.getDoctorById(appointment.doctor_id),
+              userApiService.getUserById(appointment.patient_id),
+              clinicApi.getClinic(appointment.clinic_id),
+              scheduleApi.getSchedule(
+                appointment.doctor_id,
+                appointment.schedule_id
+              ),
+            ]);
 
-          console.log("doctorInfo", doctorInfo);
-          console.log("patientInfo", patientInfo);
-
-          if (!doctorInfo || !patientInfo) {
-            console.error(
-              `Missing data for appointment ${appointment.appointment_id}`
-            );
-            return null;
-          }
-
-          // Xử lý user_profiles từ patientInfo
-          const patientProfile =
-            Array.isArray(patientInfo.userData.user_profiles) &&
-            patientInfo.userData.user_profiles.length > 0
-              ? patientInfo.userData.user_profiles[0]
-              : {};
+          const doctorData = doctorInfo.doctorData;
+          const patientData = patientInfo.userData;
+          const clinicData = clinicInfo.clinicData;
+          const scheduleData = scheduleInfo.scheduleData;
 
           return {
-            appointment_id: appointment.appointment_id || "",
-            appointment_date: appointment.appointment_date || "",
-            start_time: appointment.start_time || "",
-            end_time: appointment.end_time || "",
-            booking_time: appointment.booking_time || "",
-            cancellation_time: appointment.cancellation_time || "",
-            cancellation_reason: appointment.cancellation_reason || "",
-            rejection_time: appointment.rejection_time || "",
-            rejection_reason: appointment.rejection_reason || "",
-            status: appointment.status.status_name,
-            doctorInfor: {
-              doctor_id: doctorInfo.doctorData.doctor_id || "",
-              specialization: {
-                name: doctorInfo.doctorData.specialization.name || "",
-                description:
-                  doctorInfo.doctorData.specialization.description || "",
-              },
-              position: doctorInfo.doctorData.position || "",
-              experience_years: doctorInfo.doctorData.experience_years || "",
-              consultation_fee: doctorInfo.doctorData.consultation_fee || "",
-              full_name: doctorInfo.doctorData.full_name || "",
-              email: doctorInfo.doctorData.email || "",
-              phone: doctorInfo.doctorData.phone || "",
-              user_role: doctorInfo.doctorData.user_role || "",
-              date_of_birth: doctorInfo.doctorData.date_of_birth || "",
-              gender: doctorInfo.doctorData.gender || "",
-              address: doctorInfo.doctorData.address || "",
-              avatar: doctorInfo.doctorData.avatar || "",
-            },
-            patientInfor: {
-              patient_id: patientInfo.userData.user_id || "",
-              email: patientInfo.userData.email || "",
-              user_role: patientInfo.userData.user_role || "",
-              full_name: patientProfile.full_name || "",
-              date_of_birth: patientProfile.date_of_birth || "",
-              gender: patientProfile.gender || "",
-              address: patientProfile.address || "",
-              avatar: patientProfile.avatar || "",
-            },
+            appointment,
+            doctorData,
+            patientData,
+            clinicData,
+            scheduleData,
           };
         } catch (error) {
           console.error(
-            `Error fetching details for appointment ${appointment.appointment_id}:`,
+            `Lỗi lấy chi tiết lịch hẹn ${appointment.appointment_id}:`,
             error
           );
           return null;
@@ -162,10 +168,7 @@ const getAllAppointments = async (role, userId) => {
       })
     );
 
-    // Lọc ra các lịch hẹn hợp lệ
-    const validAppointments = appointmentsWithDetails.filter(
-      (appointment) => appointment !== null
-    );
+    const validAppointments = appointmentsWithDetails.filter(Boolean);
 
     return {
       EM: "Lấy danh sách lịch hẹn thành công",
@@ -182,11 +185,11 @@ const getAllAppointments = async (role, userId) => {
   }
 };
 
-const getAppointmentDetail = async (appointmentId, userRole, userId) => {
+const getAppointmentDetail = async (id) => {
   try {
     // Tìm lịch hẹn trong database
     const appointment = await db.appointments.findOne({
-      where: { appointment_id: appointmentId },
+      where: { id: id },
       include: [
         {
           model: db.appointment_status,
@@ -207,81 +210,26 @@ const getAppointmentDetail = async (appointmentId, userRole, userId) => {
       };
     }
 
-    // Kiểm tra quyền truy cập
-    if (
-      (userRole === "DOCTOR" && appointment.doctor_id !== userId) ||
-      (userRole === "PATIENT" && appointment.patient_id !== userId)
-    ) {
-      return {
-        EM: "Không có quyền xem chi tiết lịch hẹn này",
-        EC: -2,
-        DT: null,
-      };
-    }
+    // Lấy chi tiết bác sĩ, bệnh nhân, phòng khám, và lịch khám
+    const [doctorInfo, patientInfo, clinicInfo, scheduleInfo] =
+      await Promise.all([
+        doctorApiService.getDoctorById(appointment.doctor_id),
+        userApiService.getUserById(appointment.patient_id),
+        clinicApi.getClinic(appointment.clinic_id),
+        scheduleApi.getSchedule(appointment.doctor_id, appointment.schedule_id),
+      ]);
 
-    // Lấy thông tin bác sĩ và bệnh nhân từ các API liên quan
-    const [doctorInfo, patientInfo] = await Promise.all([
-      doctorApiService.getDoctorById(appointment.doctor_id),
-      userApiService.getUserById(appointment.patient_id),
-    ]);
+    const doctorData = doctorInfo?.doctorData || null;
+    const patientData = patientInfo?.userData || null;
+    const clinicData = clinicInfo?.clinicData || null;
+    const scheduleData = scheduleInfo?.scheduleData || null;
 
-    // Kiểm tra dữ liệu từ các API
-    if (!doctorInfo || !patientInfo) {
-      return {
-        EM: "Không thể lấy đầy đủ thông tin chi tiết",
-        EC: -3,
-        DT: null,
-      };
-    }
-
-    // Xử lý dữ liệu thông tin bệnh nhân
-    const patientProfile =
-      Array.isArray(patientInfo.userData.user_profiles) &&
-      patientInfo.userData.user_profiles.length > 0
-        ? patientInfo.userData.user_profiles[0]
-        : {};
-
-    // Tạo object chứa chi tiết lịch hẹn
     const appointmentDetail = {
-      appointment_id: appointment.appointment_id || "",
-      appointment_date: appointment.appointment_date || "",
-      start_time: appointment.start_time || "",
-      end_time: appointment.end_time || "",
-      booking_time: appointment.booking_time || "",
-      note: appointment.note || "",
-      cancellation_time: appointment.cancellation_time || "",
-      cancellation_reason: appointment.cancellation_reason || "",
-      rejection_time: appointment.rejection_time || "",
-      rejection_reason: appointment.rejection_reason || "",
-      status: appointment.status.status_name || "",
-      doctorInfor: {
-        doctor_id: doctorInfo.doctorData.doctor_id || "",
-        specialization: {
-          name: doctorInfo.doctorData.specialization.name || "",
-          description: doctorInfo.doctorData.specialization.description || "",
-        },
-        position: doctorInfo.doctorData.position || "",
-        experience_years: doctorInfo.doctorData.experience_years || "",
-        consultation_fee: doctorInfo.doctorData.consultation_fee || "",
-        full_name: doctorInfo.doctorData.full_name || "",
-        email: doctorInfo.doctorData.email || "",
-        phone: doctorInfo.doctorData.phone || "",
-        user_role: doctorInfo.doctorData.user_role || "",
-        date_of_birth: doctorInfo.doctorData.date_of_birth || "",
-        gender: doctorInfo.doctorData.gender || "",
-        address: doctorInfo.doctorData.address || "",
-        avatar: doctorInfo.doctorData.avatar || "",
-      },
-      patientInfor: {
-        patient_id: patientInfo.userData.user_id || "",
-        email: patientInfo.userData.email || "",
-        user_role: patientInfo.userData.user_role || "",
-        full_name: patientProfile.full_name || "",
-        date_of_birth: patientProfile.date_of_birth || "",
-        gender: patientProfile.gender || "",
-        address: patientProfile.address || "",
-        avatar: patientProfile.avatar || "",
-      },
+      appointment,
+      doctorData,
+      patientData,
+      clinicData,
+      scheduleData,
     };
 
     return {
@@ -299,10 +247,10 @@ const getAppointmentDetail = async (appointmentId, userRole, userId) => {
   }
 };
 
-const cancelAppointment = async (appointmentId, userId, cancelReason) => {
+const cancelAppointment = async (id, data) => {
   try {
     const appointment = await db.appointments.findOne({
-      where: { appointment_id: appointmentId, patient_id: userId },
+      where: { id: id },
     });
 
     if (!appointment) {
@@ -314,19 +262,53 @@ const cancelAppointment = async (appointmentId, userId, cancelReason) => {
     }
 
     appointment.cancellation_time = new Date();
-    appointment.cancellation_reason = cancelReason;
+    appointment.cancellation_reason = data.cancellation_reason;
     appointment.status_id = 3;
 
-   const patientResponse = await userApiService.getUserById(userId);
+    const doctorResponse = await doctorApiService.getDoctorById(
+      appointment.doctor_id
+    );
+    if (!doctorResponse) {
+      return {
+        EM: "Không tìm thấy bác sĩ",
+        EC: -2,
+        DT: "",
+      };
+    }
+
+    // Kiểm tra bệnh nhân
+    const patientResponse = await userApiService.getUserById(
+      appointment.patient_id
+    );
+    if (!patientResponse) {
+      return {
+        EM: "Không tìm thấy bệnh nhân",
+        EC: -3,
+        DT: "",
+      };
+    }
+
     await appointment.save();
+    await scheduleApi.updateStatusSchedule(appointment.doctor_id, appointment.schedule_id, { status: "AVAILABLE" });
+
     try {
       await emailService.sendAppointmentCancellationEmail(
         patientResponse.userData.email,
-        await getAppointmentDetail(appointmentId)
+        await getAppointmentDetail(id),
+        false
+      );
+      // Gửi thông báo cho bác sĩ
+      await emailService.sendAppointmentCancellationEmail(
+        doctorResponse.doctorData.userData.email,
+
+        await getAppointmentDetail(id),
+        true
       );
     } catch (error) {
       console.error("Error sending cancellation email:", error);
     }
+
+
     return {
       EM: "Hủy lịch hẹn thành công",
       EC: 0,
@@ -335,18 +317,18 @@ const cancelAppointment = async (appointmentId, userId, cancelReason) => {
   } catch (error) {
     console.error("Error cancelling appointment:", error);
     return {
-      EM: "Lỗi server",
-      EC: -1,
+      EM: "Lỗi server:",
+      error,
+      EC: -4,
       DT: null,
     };
   }
 };
 
-const approveAppointment = async (appointmentId, userId, userRole) => {
+const approveAppointment = async (appointmentId) => {
   try {
     const appointment = await db.appointments.findOne({
-      where: { appointment_id: appointmentId },
-
+      where: { id: appointmentId },
     });
     if (!appointment) {
       return {
@@ -356,44 +338,34 @@ const approveAppointment = async (appointmentId, userId, userRole) => {
       };
     }
 
-    // Kiểm tra quyền hạn của user
-    if (userRole === "DOCTOR") {
-      // Chuyển đổi cả hai về string nếu chúng khác kiểu dữ liệu
-      const doctorId = String(appointment.doctor_id); // Chuyển doctor_id về string
-      const userIdStr = String(userId); // Chuyển userId về string
-
-      if (doctorId !== userIdStr) {
-        return {
-          EM: "Bạn không có quyền đồng ý lịch hẹn này",
-          EC: -1,
-          DT: null,
-        };
-      }
-    }
-
-    // Admin có quyền cập nhật tất cả lịch hẹn
     appointment.approval_time = new Date();
-    appointment.status_id = 2; // Giả định 2 là trạng thái "Đã đồng ý"
+    appointment.status_id = 2;
     await appointment.save();
-      const patientResponse = await userApiService.getUserById(appointment.patient_id);
+    const doctorResponse = await doctorApiService.getDoctorById(
+      appointment.doctor_id
+    );
+    const patientResponse = await userApiService.getUserById(
+      appointment.patient_id
+    );
 
-      const doctortResponse = await userApiService.getUserById(userId);
-
-      console.log("patientResponse" , patientResponse )
     try {
       await emailService.sendAppointmentApprovalEmail(
         patientResponse.userData.email,
-        await getAppointmentDetail(appointmentId)
+        await getAppointmentDetail(appointmentId),
+        false
       );
-       await emailService.sendAppointmentApprovalEmail(
-         doctortResponse.userData.email,
-         await getAppointmentDetail(appointmentId)
-       );
+
+      // await emailService.sendAppointmentApprovalEmail(
+      //   doctorResponse.doctorData.userData.email,
+
+      //   await getAppointmentDetail(appointmentId),
+      //   true
+      // );
     } catch (error) {
       console.error("Error sending approval email:", error);
     }
     return {
-      EM: "Đồng ý lịch hẹn thành công",
+      EM: "Phê duyệt lịch hẹn thành công",
       EC: 0,
       DT: appointment,
     };
@@ -407,17 +379,12 @@ const approveAppointment = async (appointmentId, userId, userRole) => {
   }
 };
 
-const rejectAppointment = async (
-  appointmentId,
-  userId,
-  rejectReason,
-  userRole
-) => {
+const rejectAppointment = async (appointmentId, data) => {
   try {
     const appointment = await db.appointments.findOne({
-      where: { appointment_id: appointmentId },
+      where: { id: appointmentId },
     });
-     
+
     if (!appointment) {
       return {
         EM: "Không tìm thấy lịch hẹn",
@@ -426,39 +393,32 @@ const rejectAppointment = async (
       };
     }
 
-    // Kiểm tra quyền hạn của user
-    if (userRole === "DOCTOR") {
-      // Bác sĩ chỉ có quyền trên lịch hẹn của mình
-      if (appointment.doctor_id !== userId) {
-        return {
-          EM: "Bạn không có quyền từ chối lịch hẹn này",
-          EC: -1,
-          DT: null,
-        };
-      }
-    }
-
     // Admin có quyền cập nhật tất cả lịch hẹn
     appointment.rejection_time = new Date();
-    appointment.rejection_reason = rejectReason;
-    appointment.status_id = 4; // Giả định 4 là trạng thái "Đã từ chối"
+    appointment.rejection_reason = data.rejecton_reson;
+    appointment.status_id = 4;
     await appointment.save();
-  
+    await scheduleApi.updateStatusSchedule(appointment.doctor_id, appointment.schedule_id, { status: "AVAILABLE" });
+
     const patientResponse = await userApiService.getUserById(
-            appointment.patient_id
-          );
-    const doctorResponse = await userApiService.getUserById(userId);
+      appointment.patient_id
+    );
+    const doctorResponse = await doctorApiService.getDoctorById(
+      appointment.doctor_id
+    );
 
     try {
       await emailService.sendAppointmentRejectionEmail(
         patientResponse.userData.email,
-        await getAppointmentDetail(appointmentId)
+        await getAppointmentDetail(appointmentId),
+        false
       );
+      // await emailService.sendAppointmentRejectionEmail(
+      //   doctorResponse.doctorData.userData.email,
 
-        await emailService.sendAppointmentRejectionEmail(
-          doctorResponse.userData.email,
-          await getAppointmentDetail(appointmentId)
-        );
+      //   await getAppointmentDetail(appointmentId),
+      //   true
+      // );
     } catch (error) {
       console.error("Error sending rejection email:", error);
     }
@@ -471,10 +431,93 @@ const rejectAppointment = async (
   } catch (error) {
     console.error("Error rejecting appointment:", error);
     return {
-      EM: "Lỗi server",
+      EM: "Lỗi ", error,
+      error,
       EC: -1,
       DT: null,
     };
+  }
+};
+
+
+const confirmPayment = async (appointmentId) => {
+  try {
+    const appointment = await db.appointments.findOne({
+      where: { id: appointmentId },
+    });
+
+    if (!appointment) {
+      return {
+        EM: "Không tìm thấy lịch hẹn",
+        EC: -1,
+        DT: null,
+      };
+    }
+
+
+    appointment.status_id = 5;
+    await appointment.save();
+
+    const patientResponse = await userApiService.getUserById(
+      appointment.patient_id
+    );
+    const doctorResponse = await doctorApiService.getDoctorById(
+      appointment.doctor_id
+    );
+
+    try {
+      // await emailService.sendAppointmentRejectionEmail(
+      //   patientResponse.userData.email,
+      //   await getAppointmentDetail(appointmentId),
+      //   false
+      // );
+      // await emailService.sendAppointmentRejectionEmail(
+      //   doctorResponse.doctorData.userData.email,
+
+      //   await getAppointmentDetail(appointmentId),
+      //   true
+      // );
+    } catch (error) {
+      console.error("Error sending rejection email:", error);
+    }
+
+    return {
+      EM: "Lịch hẹn đã được thanh toán",
+      EC: 0,
+      DT: appointment,
+    };
+  } catch (error) {
+    console.error("Error", error);
+    return {
+      EM: `Lỗi ${error.message}`,
+      EC: -1,
+      DT: null,
+    };
+  }
+};
+
+export const createPaymentLink = async (order) => {
+  try {
+    if (!payos) {
+      throw new Error("PayOS client not initialized");
+    }
+    await paymentApiService.createNewPayment(order)
+    const paymentLinkResponse = await payos.createPaymentLink({
+      orderCode: order.orderCode,
+      amount: parseInt(order.amount),
+      description: order.description,
+      returnUrl: order.returnUrl,
+      cancelUrl: order.cancelUrl,
+      expiredAt: Math.floor((Date.now() + 15 * 60 * 1000) / 1000) 
+    });
+
+    if (!paymentLinkResponse || !paymentLinkResponse.checkoutUrl) {
+      throw new Error("Invalid payment link response from PayOS");
+    }
+    return paymentLinkResponse;
+  } catch (error) {
+    console.error("Error in createPaymentLink:", error);
+    throw new Error(`Payment link creation failed: ${error.message}`);
   }
 };
 
@@ -485,4 +528,7 @@ export default {
   cancelAppointment,
   approveAppointment,
   rejectAppointment,
+  createPaymentLink,
+  confirmPayment,
+  
 };

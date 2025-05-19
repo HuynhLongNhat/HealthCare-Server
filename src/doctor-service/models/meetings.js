@@ -1,14 +1,11 @@
 const Sequelize = require('sequelize');
 module.exports = function(sequelize, DataTypes) {
-  const meeting = sequelize.define('meeting', {
-    meeting_id: {
-      type: DataTypes.STRING(36),
+  const meetings =  sequelize.define('meetings', {
+    id: {
+      autoIncrement: true,
+      type: DataTypes.INTEGER,
       allowNull: false,
       primaryKey: true
-    },
-    patient_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false
     },
     doctor_id: {
       type: DataTypes.INTEGER,
@@ -23,7 +20,7 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: true
     },
     meeting_url: {
-      type: DataTypes.TEXT,
+      type: DataTypes.STRING(512),
       allowNull: true
     },
     date: {
@@ -33,18 +30,10 @@ module.exports = function(sequelize, DataTypes) {
     duration: {
       type: DataTypes.INTEGER,
       allowNull: true
-    },
-    reason: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
-    status: {
-      type: DataTypes.STRING(50),
-      allowNull: true
     }
   }, {
     sequelize,
-    tableName: 'meeting',
+    tableName: 'meetings',
     timestamps: true,
     indexes: [
       {
@@ -52,7 +41,7 @@ module.exports = function(sequelize, DataTypes) {
         unique: true,
         using: "BTREE",
         fields: [
-          { name: "meeting_id" },
+          { name: "id" },
         ]
       },
       {
@@ -64,8 +53,9 @@ module.exports = function(sequelize, DataTypes) {
       },
     ]
   });
-  meeting.associate = (models) =>{
-    meeting.belongsTo(models.doctors, { as: "doctor", foreignKey: "doctor_id"})
+  meetings.associate = (models) => {
+      meetings.belongsTo(models.doctors, { as: "doctor", foreignKey: "doctor_id"});
+
   }
-  return meeting;
+  return meetings
 };

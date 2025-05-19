@@ -4,10 +4,11 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "concurrently \"npm run start:user\" \"npm run start:doctor\"  \"npm run start:appointment\"",
+    "start": "concurrently \"npm run start:user\" \"npm run start:doctor\"  \"npm run start:appointment\"  \"npm run start:payment\" ",
     "start:user": " npx nodemon --exec babel-node src/user-service/server.js",
     "start:doctor": " npx nodemon --exec babel-node src/doctor-service/server.js",
-    "start:appointment": " npx nodemon --exec babel-node src/appointment-service/server.js"
+    "start:appointment": " npx nodemon --exec babel-node src/appointment-service/server.js",
+    "start:payment": " npx nodemon --exec babel-node src/payment-service/server.js"
   },
   "author": "Long Nhat",
   "license": "ISC",
@@ -16,6 +17,7 @@
     "@babel/core": "^7.25.8",
     "@babel/node": "^7.25.7",
     "@babel/preset-env": "^7.25.8",
+    "@payos/node": "^1.0.10",
     "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
     "bluebird": "3.7.2",
@@ -23,6 +25,7 @@
     "concurrently": "^9.1.2",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
+    "crypto": "^1.0.1",
     "dotenv": "10.0.0",
     "ejs": "3.1.6",
     "express": "^4.17.2",

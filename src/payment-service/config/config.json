@@ -2,7 +2,7 @@
   "development": {
     "username": "root",
     "password": "admin",
-    "database": "healthcare_appointmentservice",
+    "database": "healthcare_paymentservice",
     "host": "127.0.0.1",
     "dialect": "mysql",
     "logging" : false

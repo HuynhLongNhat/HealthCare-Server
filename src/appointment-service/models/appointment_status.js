@@ -1,9 +1,9 @@
 const Sequelize = require('sequelize');
 module.exports = function(sequelize, DataTypes) {
-  const appointment_status = sequelize.define('appointment_status', {
-    status_id: {
+  const appointment_status =  sequelize.define('appointment_status', {
+    id: {
       autoIncrement: true,
-      type: DataTypes.TINYINT,
+      type: DataTypes.INTEGER,
       allowNull: false,
       primaryKey: true
     },
@@ -21,17 +21,13 @@ module.exports = function(sequelize, DataTypes) {
         unique: true,
         using: "BTREE",
         fields: [
-          { name: "status_id" },
+          { name: "id" },
         ]
       },
     ]
   });
-
   appointment_status.associate = (models) => {
-     appointment_status.hasMany(models.appointments, {
-       as: "appointments",
-       foreignKey: "status_id",
-     });
-  };
+      appointment_status.hasMany(models.appointments, { as: "appointments", foreignKey: "status_id"});
+  }
   return appointment_status;
 };

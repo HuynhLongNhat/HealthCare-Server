@@ -1,21 +1,13 @@
 import appointmentService from "../services/appointmentService";
+import paymentApiService from "../services/paymentApiService";
+import { verifyPayOSWebhook } from "../utils/payosWebhook";
 
 
 const createAppointment = async (req, res) => {
   try {
-    const patient_id = req.user.userId;
-    const { doctor_id, appointment_date, note, start_time, end_time } =
-      req.body;
-
     const appointment = await appointmentService.createAppointment(
-      patient_id,
-      doctor_id,
-      appointment_date,
-      note,
-      start_time,
-      end_time
+     req.body
     );
-
     return res.json({
       EM: appointment.EM,
       EC: appointment.EC,
@@ -32,9 +24,8 @@ const createAppointment = async (req, res) => {
 
 const getAllAppointments = async (req, res) => {
   try {
-    const user = req.user;
-   const { role, userId } = user;
-    const appointments = await appointmentService.getAllAppointments(role, userId);
+    const { userId } = req.params
+    const appointments = await appointmentService.getAllAppointments(userId);
     return res.json({
       EM: appointments.EM,
       EC: appointments.EC,
@@ -51,13 +42,9 @@ const getAllAppointments = async (req, res) => {
 
 const getAppointmentDetail = async (req, res) => {
   try {
-    const appointmentId = req.params.id;
-      const user = req.user;
-      const { role, userId } = user;
+    const {id} = req.params;
     const appointment = await appointmentService.getAppointmentDetail(
-      appointmentId,
-      role,
-      userId
+      id
     );
 
     return res.json({
@@ -76,64 +63,117 @@ const getAppointmentDetail = async (req, res) => {
 const cancelAppointment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { cancel_reason } = req.body;
-    const userId = req.user.userId;
-
     const result = await appointmentService.cancelAppointment(
       id,
-      userId,
-      cancel_reason
+      req.body
     );
-
-    if (result.EC === 0) {
-      return res.status(200).json(result);
-    } else {
-      return res.status(404).json(result);
-    }
+    return res.json({
+      EM: result.EM,
+      EC: result.EC,
+      DT: result.DT,
+    });
   } catch (error) {
-    console.error("Error cancelling appointment:", error);
-    return res.status(500).json({ EM: "Lỗi server", EC: -1 });
+    return res.json({
+      EM: error.message,
+      EC: -1,
+      DT: null,
+    });
   }
 };
 
 const approveAppointment = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.userId;
-
-    const result = await appointmentService.approveAppointment(id, userId);
-
-    if (result.EC === 0) {
-      return res.status(200).json(result);
-    } else {
-      return res.status(404).json(result);
-    }
+    const result = await appointmentService.approveAppointment(id);
+    return res.json({
+      EM: result.EM,
+      EC: result.EC,
+      DT: result.DT,
+    });
   } catch (error) {
-    console.error("Error approving appointment:", error);
-    return res.status(500).json({ EM: "Lỗi server", EC: -1 });
+   return res.json({
+      EM: error.message,
+      EC: -1,
+      DT: null,
+    });
   }
 };
 
 const rejectAppointment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { reject_reason } = req.body;
-    const userId = req.user.userId;
-
     const result = await appointmentService.rejectAppointment(
       id,
-      userId,
-      reject_reason
+       req.body
     );
 
-    if (result.EC === 0) {
-      return res.status(200).json(result);
-    } else {
-      return res.status(404).json(result);
-    }
+    return res.json({
+      EM: result.EM,
+      EC: result.EC,
+      DT: result.DT,
+    });
   } catch (error) {
-    console.error("Error rejecting appointment:", error);
-    return res.status(500).json({ EM: "Lỗi server", EC: -1 });
+    return res.json({
+      EM: error.message,
+      EC: -1,
+      DT: null,
+    });
+  }
+};
+
+
+const confirmPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await appointmentService.confirmPayment(
+      id
+     
+    );
+
+    return res.json({
+      EM: result.EM,
+      EC: result.EC,
+      DT: result.DT,
+    });
+  } catch (error) {
+    return res.json({
+      EM: error.message,
+      EC: -1,
+      DT: null,
+    });
+  }
+};
+
+
+ const generatePaymentLink = async (req, res) => {
+   try {
+  
+    const { amount, description, orderCode, returnUrl, cancelUrl ,data} = req.body;
+    if (!amount || !description || !orderCode || !returnUrl || !cancelUrl) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
+      });
+    }
+    const paymentUrl = await appointmentService.createPaymentLink({
+      amount,
+      description: description.slice(0, 25),
+      orderCode,
+      returnUrl,
+      cancelUrl,
+      data
+    });
+
+    return res.status(200).json({
+      success: true,
+      paymentUrl,
+    });
+  } catch (error) {
+    console.error("Payment link generation error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to create payment link",
+    });
   }
 };
 
@@ -146,4 +186,6 @@ export default {
   cancelAppointment,
   approveAppointment,
   rejectAppointment,
+  generatePaymentLink,
+  confirmPayment
 };
