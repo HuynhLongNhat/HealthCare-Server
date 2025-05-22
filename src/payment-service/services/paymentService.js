@@ -1,4 +1,5 @@
 import userApiService from "../../appointment-service/services/userApiService";
+import emailService from "../../email-service/emailService";
 import db from "../models/";
 import appointmentApiService from "./appointmentApiService";
 
@@ -51,7 +52,38 @@ export const createNewPaymentForCash = async (data) => {
         status_id: 2,
       },
     );
+    const patientResponse = await userApiService.getUserById(
+          data.patient_id
+    );
+   const payloadSendEmail = {
+  patientName: patientResponse.userData.full_name,
+  transfer_content: data.transfer_content,
+  payment_date: new Date().toLocaleString('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }),
+  amount: new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(data.amount),
+};
 
+    try {
+      await emailService.sendEmailPaymentSuccess(
+      // patientResponse.userData.email 
+        "nhathuynh227@gmail.com"
+        ,payloadSendEmail 
+        )
+    } catch (error) {
+            console.error("Error sending rejection email:", error);
+
+    }
     if (payment) {
       return {
         EM: "Xác nhận thanh toán thành công",

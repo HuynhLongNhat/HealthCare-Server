@@ -768,6 +768,72 @@ const sendAppointmentRejectionEmail = async (
   }
 };
 
+
+const sendEmailPaymentSuccess = async (
+  recipientEmail,
+  paymentData,
+) => {
+  try {
+    const patientName = paymentData.patientName || '---';
+    const amount = paymentData.amount || '---'; // sửa từ "amout"
+    const payment_date = paymentData.payment_date || '---';
+    const transfer_content = paymentData.transfer_content || '---';
+
+    const html = `
+      <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; border-radius: 8px; border: 1px solid #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #16a34a; font-weight: 600; margin-bottom: 5px; font-size: 24px;">Xác Nhận Thanh Toán Thành Công</h1>
+          <div style="width: 50px; height: 4px; background-color: #16a34a; margin: 0 auto;"></div>
+        </div>
+
+        <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">
+          Xin chào <span style="font-weight: 600; color: #16a34a;">${patientName}</span>,
+        </p>
+
+        <p style="font-size: 16px; line-height: 1.5; margin-bottom: 15px;">
+          Chúng tôi đã nhận được thanh toán của bạn với thông tin như sau:
+        </p>
+
+        <div style="background-color: #f8f9fa; border-radius: 6px; padding: 20px; margin-bottom: 25px; border-left: 4px solid #16a34a;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 10px 5px; border-bottom: 1px solid #e0e0e0;"><strong style="color: #555;">Nội dung chuyển khoản:</strong></td>
+              <td style="padding: 10px 5px; border-bottom: 1px solid #e0e0e0;">${transfer_content}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 5px; border-bottom: 1px solid #e0e0e0;"><strong style="color: #555;">Ngày thanh toán:</strong></td>
+              <td style="padding: 10px 5px; border-bottom: 1px solid #e0e0e0;">${payment_date}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 5px; border-bottom: 1px solid #e0e0e0;"><strong style="color: #555;">Số tiền:</strong></td>
+              <td style="padding: 10px 5px; border-bottom: 1px solid #e0e0e0;">${amount}</td>
+            </tr>
+          </table>
+        </div>
+
+        <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">
+          Bạn có thể kiểm tra chi tiết tại mục <strong>"Lịch sử thanh toán"</strong> trên hệ thống.
+        </p>
+
+        <p style="font-size: 16px; line-height: 1.5;">Xin cảm ơn quý khách!</p>
+
+        <div style="margin-top: 40px; border-top: 1px solid #e0e0e0; padding-top: 20px; font-size: 13px; color: #757575; text-align: center;">
+          <p>Đây là email tự động, vui lòng không trả lời.</p>
+        </div>
+      </div>
+    `;
+
+    return await sendEmail(
+      recipientEmail,
+      "✅ Xác nhận thanh toán thành công",
+      html
+    );
+  } catch (error) {
+    console.error("Error sending payment success email:", error);
+    throw error;
+  }
+};
+
 const sendVerificationEmail = async (email, otpCode) => {
   try {
     const html = `
@@ -876,4 +942,5 @@ export default {
   sendAppointmentRejectionEmail,
   sendVerificationEmail,
   verifyEmailExistence,
+  sendEmailPaymentSuccess
 };

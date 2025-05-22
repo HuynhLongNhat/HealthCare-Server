@@ -16,7 +16,7 @@ module.exports = function(sequelize, DataTypes) {
       }
     },
     imageUrl: {
-      type: DataTypes.STRING(1000),
+      type: DataTypes.TEXT,
       allowNull: false
     }
   }, {
