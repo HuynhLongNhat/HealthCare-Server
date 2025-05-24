@@ -1,10 +1,10 @@
 import db from "../models";
-import doctorApiService from "./doctorApiService";
-import userApiService from "./userApiService";
+import doctorApiService from "../../utils/doctorApiService";
+import userApiService from "../../utils/userApiService";
 import emailService from "../../email-service/emailService";
-import clinicApi from "../services/clinicApi";
-import scheduleApi from "./scheduleApi";
-import paymentApiService from "./paymentApiService";
+import clinicApiService from "../../utils/clinicApiService";
+import scheduleApiService from "../../utils/scheduleApiService";
+import paymentApiService from "../../utils/paymentApiService";
 const PayOS = require("@payos/node");
 const payos = new PayOS(
   process.env.PAYOS_CLIENT_ID,
@@ -62,7 +62,7 @@ const createAppointment = async (data) => {
       status_id: 1, 
     });
 
-     await scheduleApi.updateStatusSchedule(data.doctor_id, data.schedule_id, { status: "BOOKED" });
+     await scheduleApiService.updateStatusSchedule(data.doctor_id, data.schedule_id, { status: "BOOKED" });
 
 
     if (newAppointment) {
@@ -139,8 +139,8 @@ const getAllAppointments = async (userId) => {
             await Promise.all([
               doctorApiService.getDoctorById(appointment.doctor_id),
               userApiService.getUserById(appointment.patient_id),
-              clinicApi.getClinic(appointment.clinic_id),
-              scheduleApi.getSchedule(
+              clinicApiService.getClinic(appointment.clinic_id),
+              scheduleApiService.getSchedule(
                 appointment.doctor_id,
                 appointment.schedule_id
               ),
@@ -215,8 +215,8 @@ const getAppointmentDetail = async (id) => {
       await Promise.all([
         doctorApiService.getDoctorById(appointment.doctor_id),
         userApiService.getUserById(appointment.patient_id),
-        clinicApi.getClinic(appointment.clinic_id),
-        scheduleApi.getSchedule(appointment.doctor_id, appointment.schedule_id),
+        clinicApiService.getClinic(appointment.clinic_id),
+        scheduleApiService.getSchedule(appointment.doctor_id, appointment.schedule_id),
       ]);
 
     const doctorData = doctorInfo?.doctorData || null;
@@ -289,7 +289,7 @@ const cancelAppointment = async (id, data) => {
     }
 
     await appointment.save();
-    await scheduleApi.updateStatusSchedule(appointment.doctor_id, appointment.schedule_id, { status: "AVAILABLE" });
+    await scheduleApiService.updateStatusSchedule(appointment.doctor_id, appointment.schedule_id, { status: "AVAILABLE" });
 
     try {
       await emailService.sendAppointmentCancellationEmail(
@@ -398,7 +398,7 @@ const rejectAppointment = async (appointmentId, data) => {
     appointment.rejection_reason = data.rejecton_reson;
     appointment.status_id = 4;
     await appointment.save();
-    await scheduleApi.updateStatusSchedule(appointment.doctor_id, appointment.schedule_id, { status: "AVAILABLE" });
+    await scheduleApiService.updateStatusSchedule(appointment.doctor_id, appointment.schedule_id, { status: "AVAILABLE" });
 
     const patientResponse = await userApiService.getUserById(
       appointment.patient_id

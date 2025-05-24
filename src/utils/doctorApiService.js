@@ -1,12 +1,13 @@
 import axios from "axios";
 import dotenv from "dotenv";
 dotenv.config();
+const URL = process.env.DOCTOR_SERVICE_URL;
 
 class DoctorApiService {
   async getDoctorById(doctorId) {
     try {
       const responseDoctor = await axios.get(
-        `http://localhost:8002/api/doctors/${doctorId}`
+        `${URL}/api/doctors/${doctorId}`
       );
       const doctorData = responseDoctor.data.DT;
 
@@ -32,7 +33,7 @@ class DoctorApiService {
   async getAllDoctor() {
     try {
       const responseDoctor = await axios.get(
-        `http://localhost:8002/api/doctors`
+        `${URL}/api/doctors`
       );
       const doctorData = responseDoctor.data.DT;
 

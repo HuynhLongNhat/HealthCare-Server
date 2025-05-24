@@ -3,7 +3,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const chatRoutes = require("./routes/chatRoutes");
-
+// const vectorStoreService = require("./services/vectorStore");
 const app = express();
 app.use(
   cors({
@@ -18,6 +18,10 @@ app.use(
 app.options("*", cors());
 
 app.use(bodyParser.json());
+
+// vectorStoreService.initialize()
+//   .then(() => console.log("Chat service ready with Gemini Flash"))
+//   .catch((err) => console.error("Initialization failed:", err));
 
 app.use("/api/chat", chatRoutes);
 

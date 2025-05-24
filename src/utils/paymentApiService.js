@@ -2,11 +2,13 @@ import axios from "axios";
 import dotenv from "dotenv";
 dotenv.config();
 
+const URL = process.env.APPOINTMENT_SERVICE_URL;
+
 class paymentApiService {
   async createNewPayment(data) {
     try {
       const response = await axios.post(
-       "http://localhost:8004/api/payments" , data
+       `${URL}/api/payments` , data
       );
       if (response.data.EC === 0 ) {
         return {

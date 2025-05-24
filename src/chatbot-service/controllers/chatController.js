@@ -1,10 +1,10 @@
 // controllers/chatController.js
-import { getChatResponse } from "../services/chatService";
+import chatService from "../services/chatService";
 
 const handleChat = async (req, res) => {
   try {
     const { question } = req.body; 
-    const response = await getChatResponse(question);
+    const response = await chatService.getChatResponse(question);
     res.json(response);
   } catch (error) {
     console.error("Chat error:", error);

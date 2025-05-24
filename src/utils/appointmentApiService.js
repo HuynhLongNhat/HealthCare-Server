@@ -2,15 +2,16 @@ import axios from "axios";
 import dotenv from "dotenv";
 dotenv.config();
 
-class scheduleApi {
-  async getSchedule(doctorId, scheduleId) {
+const URL = process.env.APPOINTMENT_SERVICE_URL;
+class appointmentApiService {
+  async getAppointmentDetail(appointmentId) {
     try {
       const response = await axios.get(
-        `http://localhost:8002/api/doctors/${doctorId}/schedules/${scheduleId}`
+        `${URL}/api/appointments/${appointmentId}`
       );
 
-      const scheduleData = response.data.DT;
-      if (!scheduleData) {
+      const appointmentData = response.data.DT;
+      if (!appointmentData) {
         return {
           EM: "Không nhận được dữ liệu từ server",
           EC: -1,
@@ -18,7 +19,7 @@ class scheduleApi {
         };
       }
       return {
-        scheduleData,
+        appointmentData,
       };
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -31,4 +32,4 @@ class scheduleApi {
   }
 }
 
-export default new scheduleApi();
+export default new appointmentApiService();

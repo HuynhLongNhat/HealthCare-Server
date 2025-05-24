@@ -1,7 +1,7 @@
-import userApiService from "../../appointment-service/services/userApiService";
+import userApiService from "../../utils/userApiService";
 import emailService from "../../email-service/emailService";
 import db from "../models/";
-import appointmentApiService from "./appointmentApiService";
+import appointmentApiService from "../../utils/appointmentApiService";
 
 
 export const createNewPayment = async (data) => {

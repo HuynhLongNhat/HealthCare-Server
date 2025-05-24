@@ -92,8 +92,9 @@ class DoctorController {
 
   async updateDoctorProfile(req, res) {
     try {
+      const {doctorId} = req.params
       const result = await doctorService.updateDoctorProfile(
-        req.params.id,
+        doctorId,
         req.body
       );
 
@@ -678,6 +679,23 @@ class DoctorController {
       });
     }
   }
+
+  async searchClinics(req, res) {
+  try {
+    const result = await doctorService.searchClinics(req.query);
+    return res.status(200).json({
+      EM: result.EM,
+      EC: result.EC,
+      DT: result.DT,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      EM: error.message,
+      EC: -1,
+      DT: [],
+    });
+  }
+}
 }
 
 export default new DoctorController();

@@ -1,16 +1,17 @@
 import axios from "axios";
 import dotenv from "dotenv";
 dotenv.config();
+const URL = process.env.DOCTOR_SERVICE_URL;
 
-class UserApiService {
-  async getUserById(userId) {
+
+class clinicApiService {
+  async getClinic(clinicId) {
     try {
       const response = await axios.get(
-        `http://localhost:8001/api/users/${userId}`
+        `${URL}/api/doctors/clinics/${clinicId}`
       );
-      
-      const userData = response.data.DT;
-      if (!userData) {
+      const clinicData = response.data.DT;
+      if (!clinicData) {
         return {
           EM: "Không nhận được dữ liệu từ server",
           EC: -1,
@@ -18,7 +19,7 @@ class UserApiService {
         };
       }
       return {
-        userData,
+        clinicData,
       };
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -31,4 +32,4 @@ class UserApiService {
   }
 }
 
-export default new UserApiService();
+export default new clinicApiService();

@@ -6,13 +6,13 @@ import cors from "cors";
 import swaggerUi from "swagger-ui-express";
 import { specs } from "./config/swagger";
 import userRoutes from "./routes/userRoutes";
-import authRoutes from "./routes/authRoutes"; // Import auth routes
+import authRoutes from "./routes/authRoutes";
 import passport from "passport";
 import session from "express-session";
-require("./config/passport"); // Import Passport configuration
+require("./config/passport"); 
 
 const app = express();
-const USER_SERVICE_PORT = process.env.USER_SERVICE_PORT || 8000;
+const USER_SERVICE_PORT = process.env.USER_SERVICE_PORT  || 8001;
 
 // Cấu hình CORS
 app.use(

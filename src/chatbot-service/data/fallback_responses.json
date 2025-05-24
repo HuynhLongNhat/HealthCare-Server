@@ -1,0 +1,16 @@
+{
+  "fallback_responses": [
+    {
+      "keywords": ["triệu chứng", "dấu hiệu", "biểu hiện"],
+      "response": "Để tôi có thể tư vấn chính xác hơn về triệu chứng, bạn có thể cho biết cụ thể:\n• Triệu chứng gì?\n• Xuất hiện khi nào?\n• Mức độ nghiêm trọng?\n• Có kèm theo triệu chứng khác không?"
+    },
+    {
+      "keywords": ["bệnh gì", "mắc bệnh", "chẩn đoán"],
+      "response": "Tôi cần thêm thông tin để hỗ trợ bạn tốt hơn:\n• Bạn có triệu chứng gì?\n• Kéo dài bao lâu?\n• Có tiền sử bệnh nào không?\n\n⚠️ Lưu ý: Chỉ bác sĩ mới có thể chẩn đoán chính xác."
+    },
+    {
+      "keywords": ["bác sĩ", "khám ở đâu", "chuyên khoa"],
+      "response": "Để tư vấn chuyên khoa phù hợp, tôi cần biết:\n• Vấn đề sức khỏe cụ thể?\n• Triệu chứng chính?\n• Khu vực bạn muốn khám?\n\nTôi sẽ gợi ý chuyên khoa và địa điểm phù hợp."
+    }
+  ]
+}

@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import db from "../models/index";
 import emailService from "../../email-service/emailService";
 import { Op } from "sequelize";
-import { generateNewOTP } from "../utils/otpUtis";
+import { generateNewOTP } from "../../utils/otpUtis";
 import crypto from "crypto";
 class UserService {
   async register(userData) {

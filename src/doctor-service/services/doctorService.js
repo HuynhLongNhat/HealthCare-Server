@@ -1,6 +1,5 @@
-import { v4 as uuidv4 } from "uuid";
 import db from "../models";
-import userApiService from "./userApiService";
+import userApiService from "../../utils/userApiService";
 const { Op, where } = require("sequelize");
 class DoctorService {
   // Doctor Management
@@ -1648,6 +1647,38 @@ async getDoctorSchedules(doctorId) {
       return { EM: `Lỗi hệ thống: ${error.message}`, EC: -1, DT: null };
     }
   }
+  async searchClinics(query) {
+    try {
+    const { name, address, doctor_id } = query;
+
+    if (name) {
+      where.name = { [db.Sequelize.Op.like]: `%${name}%` };
+    }
+    if (address) {
+      where.address = { [db.Sequelize.Op.like]: `%${address}%` };
+    }
+    if (doctor_id) {
+      where.doctor_id = doctor_id;
+    }
+
+    const clinics = await db.clinics.findAll({
+      order: [["id", "DESC"]],
+       limit: 5
+    });
+
+    return {
+      EM: "Tìm kiếm phòng khám thành công!",
+      EC: 0,
+      DT: clinics,
+    };
+  } catch (error) {
+    return {
+      EM: `Lỗi hệ thống: ${error.message}`,
+      EC: -2,
+      DT: [],
+    };
+  }
+}
 }
 
 export default new DoctorService();

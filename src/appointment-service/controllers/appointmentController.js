@@ -1,7 +1,4 @@
 import appointmentService from "../services/appointmentService";
-import paymentApiService from "../services/paymentApiService";
-import { verifyPayOSWebhook } from "../utils/payosWebhook";
-
 
 const createAppointment = async (req, res) => {
   try {

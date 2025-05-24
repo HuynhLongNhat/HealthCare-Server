@@ -1,16 +1,17 @@
 import axios from "axios";
 import dotenv from "dotenv";
 dotenv.config();
+const URL = process.env.DOCTOR_SERVICE_URL;
 
-class UserApiService {
-  async getUserById(userId) {
+class scheduleApiService {
+  async getSchedule(doctorId, scheduleId) {
     try {
       const response = await axios.get(
-        `http://localhost:8001/api/users/${userId}`
+        `${URL}/api/doctors/${doctorId}/schedules/${scheduleId}`
       );
 
-      const userData = response.data.DT;
-      if (!userData) {
+      const scheduleData = response.data.DT;
+      if (!scheduleData) {
         return {
           EM: "Không nhận được dữ liệu từ server",
           EC: -1,
@@ -18,7 +19,7 @@ class UserApiService {
         };
       }
       return {
-        userData,
+        scheduleData,
       };
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -29,14 +30,14 @@ class UserApiService {
       };
     }
   }
-  async getAllUsers() {
+   async updateStatusSchedule(doctorId, scheduleId , updateData) {
     try {
-      const response = await axios.get(
-        `http://localhost:8001/api/users/${userId}`
+      const response = await axios.put(
+        `${URL}/api/doctors/${doctorId}/schedules/${scheduleId}` ,updateData
       );
 
-      const userData = response.data.DT;
-      if (!userData) {
+      const scheduleData = response.data.DT;
+      if (!scheduleData) {
         return {
           EM: "Không nhận được dữ liệu từ server",
           EC: -1,
@@ -44,7 +45,7 @@ class UserApiService {
         };
       }
       return {
-        userData,
+        scheduleData,
       };
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -57,4 +58,4 @@ class UserApiService {
   }
 }
 
-export default new UserApiService();
+export default new scheduleApiService();
