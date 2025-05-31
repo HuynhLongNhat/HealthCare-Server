@@ -6,11 +6,11 @@ import appointmentApiService from "../../utils/appointmentApiService";
 
 export const createNewPayment = async (data) => {
   const transaction = await db.sequelize.transaction();
-
   try {
     const payment = await db.payments.create(
       {
         patient_id: data.data.appointment.patient_id,
+        doctor_id: data.data.appointment.doctor_id,
         amount: data.amount,
         transfer_content: data.description,
         payment_date: new Date(),
@@ -45,6 +45,7 @@ export const createNewPaymentForCash = async (data) => {
     const payment = await db.payments.create(
       {
         patient_id: data.patient_id,
+        doctor_id : data.doctor_id,
         amount: data.amount,
         transfer_content: data.transfer_content,
         payment_date: new Date(),
@@ -130,12 +131,9 @@ export const updateStatusPayment = async (orderCode, statusId) => {
   }
 };
 
-// Lấy tất cả payment (admin)
-export const getAllPayment = async ({ userId }) => {
+export const getAllPayment = async ( userId ) => {
   try {
-    // Lấy thông tin người dùng để xác định vai trò
     const { userData } = await userApiService.getUserById(userId);
-
     const whereCondition = {};
     if (userData.role_id === 3) {
       whereCondition.patient_id = userId;

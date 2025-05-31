@@ -13,6 +13,10 @@ module.exports = function (sequelize, DataTypes) {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
+       doctor_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
       amount: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,

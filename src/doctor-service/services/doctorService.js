@@ -20,7 +20,6 @@ class DoctorService {
       const res = await db.doctors.create({
         user_id: doctorData.id,
       });
-      console.log("Res", res);
       return {
         EM: "Tạo mới bác sĩ thành công.",
         EC: 0,
@@ -49,6 +48,10 @@ class DoctorService {
             model: db.clinics,
             as: "clinics",
           },
+           {
+            model: db.doctor_rating,
+            as : "doctor_ratings"
+          }
         ],
         nest: true,
       });
@@ -93,6 +96,10 @@ class DoctorService {
             model: db.clinics,
             as: "clinics",
           },
+          {
+            model: db.doctor_rating,
+            as : "doctor_ratings"
+          }
         ],
       });
 

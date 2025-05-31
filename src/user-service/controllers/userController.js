@@ -77,8 +77,7 @@ const userController = {
 
   login: async (req, res) => {
     try {
-      const { email, password } = req.body;
-      const result = await userService.login(email, password);
+      const result = await userService.login(req.body);
       res.cookie("token", result.DT.accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -118,7 +117,7 @@ const userController = {
   changePassword: async (req, res) => {
     try {
       const { oldPassword, newPassword } = req.body;
-      const userId = req.user.userId;
+      const userId = req.params.userId;
       const result = await userService.changePassword(
         userId,
         oldPassword,

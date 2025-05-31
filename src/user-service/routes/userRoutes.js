@@ -14,7 +14,7 @@ router.post("/login", userController.login);
 
 router.post("/logout", authenticateToken, userController.logout);
 
-router.post("/change-password", userController.changePassword);
+router.post("/:userId/change-password", userController.changePassword);
 
 router.post("/forgot-password", userController.forgotPassword);
 

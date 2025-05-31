@@ -109,8 +109,7 @@ const createAppointment = async (data) => {
 const getAllAppointments = async (userId) => {
   try {
     // Lấy thông tin người dùng để xác định vai trò
-    const { userData } = await userApiService.getUserById(userId);
-
+    const  {userData}  = await userApiService.getUserById(userId);
     const whereCondition = {};
     if (userData.role_id === 3) {
       whereCondition.patient_id = userId;

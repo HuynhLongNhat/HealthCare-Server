@@ -189,7 +189,7 @@ const sendAppointmentConfirmationEmail = async (
           
           <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">Xin chào <span style="font-weight: 600; color: #00897b;">${patientName}</span>,</p>
           
-          <p style="font-size: 16px; line-height: 1.5; margin-bottom: 15px;">Lịch hẹn khám của bạn đã được <span style="font-weight: 600; color: #00897b;">xác nhận thành công</span> với thông tin như sau:</p>
+          <p style="font-size: 16px; line-height: 1.5; margin-bottom: 15px;">Bạn đã đặt lịch khám với thông tin như sau:</p>
           
           <div style="background-color: #f8f9fa; border-radius: 6px; padding: 20px; margin-bottom: 25px; border-left: 4px solid #00897b;">
             <table style="width: 100%; border-collapse: collapse;">
@@ -221,7 +221,7 @@ const sendAppointmentConfirmationEmail = async (
           </div>
           
           <div style="background-color: #e8f5e9; border-radius: 6px; padding: 15px; margin-bottom: 25px; border-left: 4px solid #00897b;">
-            <p style="margin: 0; font-size: 15px; color: #2e7d32;"><strong>Lưu ý:</strong> Vui lòng đến đúng giờ để được phục vụ tốt nhất. Nếu bạn không thể đến đúng giờ, hãy liên hệ với chúng tôi để thay đổi lịch khám.</p>
+            <p style="margin: 0; font-size: 15px; color: #2e7d32;"><strong>Lưu ý:</strong> Vui lòng chờ bác sĩ phê duyệt để tiến hành khám bệnh. Xin cảm ơn!.</p>
           </div>
           <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">Xin cảm ơn!</p>
           
@@ -767,8 +767,6 @@ const sendAppointmentRejectionEmail = async (
     throw error;
   }
 };
-
-
 const sendEmailPaymentSuccess = async (
   recipientEmail,
   paymentData,
@@ -833,7 +831,96 @@ const sendEmailPaymentSuccess = async (
     throw error;
   }
 };
+const sendEmailPrescription = async (recipientEmail, data) => {
+  try {
+    const {
+      patientName = data.patientName,
+      prescriptionUrl = data.prescriptionUrl,
+      fileName = data.fileName,
+      fileSize = data.fileSize,
+      doctorName = data.doctorName || "Bác sĩ",
+      phone_number = data.phone_number,
+      clinicName = data.clinicName || "Phòng khám",
+      schedule = data.schedule || new Date().toLocaleDateString('vi-VN'),
+      time_start = data.time_start || "",
+      time_end = data.time_end || ""
+    } = data;
 
+    // Format the consultation date and time
+    const consultationDateTime = `${schedule}${time_start ? ` từ ${time_start}` : ""}${time_end ? ` đến ${time_end}` : ""}`;
+
+    const html = `
+      <div style="font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; max-width: 640px; margin: auto; padding: 0; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
+        <!-- Header with Clinic Branding -->
+        <div style="background-color: #2563eb; padding: 24px; text-align: center; color: white;">
+          <h1 style="margin: 0; font-size: 24px; font-weight: 600;">${clinicName}</h1>
+          <p style="margin: 8px 0 0; font-size: 14px; opacity: 0.9;">Chăm sóc sức khỏe toàn diện</p>
+        </div>
+        
+        <!-- Email Content -->
+        <div style="padding: 32px;">
+          <!-- Greeting -->
+          <div style="margin-bottom: 24px;">
+            <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Xin chào ${patientName},</h2>
+            <p style="margin: 0; font-size: 15px; color: #4b5563;">Dưới đây là thông tin kết quả khám bệnh của bạn</p>
+          </div>
+          
+          <!-- Prescription Card -->
+          <div style="background-color: #f8fafc; border-radius: 8px; padding: 20px; margin-bottom: 24px; border-left: 4px solid #2563eb;">
+              <div>
+                <p style="margin: 0; font-size: 13px; color: #64748b;">Bác sĩ kê đơn</p>
+                <p style="margin: 0 ; font-size: 15px; font-weight: 500; color: #1e293b;">${doctorName}</p>
+              </div>
+              <div >
+                <p style="margin: 4px 0 0; font-size: 13px; color: #64748b;">Thời gian khám</p>
+                <p style="margin: 0; font-size: 15px; font-weight: 500; color: #1e293b;">${consultationDateTime}</p>
+              </div>
+            
+            <div style="background-color: white; border-radius: 6px; padding: 16px; margin-top: 12px; border: 1px solid #e2e8f0;">
+              <p style="margin: 0 0 8px; font-size: 14px; font-weight: 500; color: #1e293b;">Đơn thuốc của bạn</p>
+             <div style="text-align: center; margin: 20px 0;">
+            <a href="${prescriptionUrl}" style="display: inline-block; padding: 10px 20px; background-color: #10b981; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">
+            📥 Tải đơn thuốc (${fileName}, ${fileSize})
+          </a>
+            </div>
+          </div>
+          
+          <!-- Instructions -->
+          <div style="margin-bottom: 24px;">
+            <h3 style="margin: 0 0 12px; font-size: 16px; color: #111827;">Hướng dẫn sử dụng đơn thuốc</h3>
+            <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #4b5563; line-height: 1.6;">
+              <li>Thực hiện đúng theo chỉ dẫn của bác sĩ</li>
+              <li>Uống thuốc đúng liều lượng và thời gian quy định</li>
+              <li>Bảo quản thuốc theo hướng dẫn trên bao bì</li>
+              <li>Tái khám đúng hẹn nếu có yêu cầu</li>
+            </ul>
+          </div>
+          
+          <!-- Contact Info -->
+          <div style="background-color: #f1f5f9; border-radius: 8px; padding: 16px; text-align: center;">
+            <p style="margin: 0 0 8px; font-size: 14px; color: #475569;">Nếu có thắc mắc về đơn thuốc, vui lòng liên hệ</p>
+            <p style="margin: 0; font-size: 15px; font-weight: 500; color: #2563eb;">${clinicName} - ${phone_number}</p>
+          </div>
+        </div>
+        
+        <!-- Footer -->
+        <div style="background-color: #f8fafc; padding: 20px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0;">
+          <p style="margin: 0 0 8px;">© ${new Date().getFullYear()} ${clinicName}. All rights reserved.</p>
+          <p style="margin: 0;">Đây là email tự động, vui lòng không trả lời.</p>
+        </div>
+      </div>
+    `;
+
+    return await sendEmail(
+      recipientEmail,
+      `🩺 ${clinicName} - Đơn thuốc điện tử ngày ${schedule}`,
+      html
+    );
+  } catch (error) {
+    console.error('Error sending prescription email:', error);
+    throw error;
+  }
+};
 const sendVerificationEmail = async (email, otpCode) => {
   try {
     const html = `
@@ -942,5 +1029,6 @@ export default {
   sendAppointmentRejectionEmail,
   sendVerificationEmail,
   verifyEmailExistence,
-  sendEmailPaymentSuccess
+  sendEmailPaymentSuccess,
+  sendEmailPrescription
 };

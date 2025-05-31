@@ -1,6 +1,5 @@
 import express from "express";
 import appointmentController from "../controllers/appointmentController";
-import { authenticateToken, checkRole } from "../middleware/auth";
 
 const router = express.Router();
 

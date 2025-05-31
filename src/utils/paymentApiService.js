@@ -2,7 +2,7 @@ import axios from "axios";
 import dotenv from "dotenv";
 dotenv.config();
 
-const URL = process.env.APPOINTMENT_SERVICE_URL;
+const URL = process.env.PAYMENT_SERVICE_URL;
 
 class paymentApiService {
   async createNewPayment(data) {
@@ -18,7 +18,7 @@ class paymentApiService {
         };
       }
     } catch (error) {
-      console.error("Error fetching user:", error);
+      console.error("Error ", error);
       return {
         EM: `Lỗi hệ thống: ${error.message}`,
         EC: -1,

@@ -183,47 +183,60 @@ class UserService {
       };
     }
   }
+  async login(data) {
+  try {
+    const user = await db.users.findOne({
+      where: { email: data.email }
+    });
+    if (!user) {
+      return { EM: "Thông tin đăng nhập không chính xác!", EC: -1, DT: [] };
+    }
+     if (!user.password) {
+      return {
+        EM: "Tài khoản này đã được đăng ký bằng phương thức khác (Google, Facebook...). Vui lòng sử dụng đúng phương thức đăng nhập.",
+        EC: -3,
+        DT: [],
+      };
+    }
+    const isMatch =  await bcrypt.compare(data.password, user.password);
+    if (!isMatch) {
+      return { EM: "Thông tin đăng nhập không chính xác!", EC: -1, DT: [] };
+    }
 
-  async login(email, password) {
-    try {
-      const user = await db.users.findOne({ where: { email } });
+    if (!user.is_verified) {
+      return { EM: "Tài khoản chưa xác thực", EC: -2, DT: [] };
+    }
 
-      if (!user || !(await bcrypt.compare(password, user.password))) {
-        return { EM: "Email hoặc mật khẩu không đúng!", EC: -1, DT: [] };
-      }
+    const accessToken = jwt.sign(
+      {
+        email: user.email,
+        username: user.username,
+        full_name: user.full_name,
+        role: user.role_id,
+        userId: user.id,
+        avatar: user.profile_picture,
+      },
+      process.env.JWT_SECRET
+    );
 
-      if (!user.is_verified) {
-        return { EM: "Tài khoản chưa xác thực", EC: -2, DT: [] };
-      }
-      const accessToken = jwt.sign(
-        {
+    return {
+      EM: "Đăng nhập thành công",
+      EC: 0,
+      DT: {
+        accessToken,
+        user: {
           email: user.email,
-          username : user.username,
-          full_name : user.full_name,
           role: user.role_id,
           userId: user.id,
           avatar: user.profile_picture,
         },
-        process.env.JWT_SECRET
-      );
-
-      return {
-        EM: "Đăng nhập thành công",
-        EC: 0,
-        DT: {
-          accessToken,
-          user: {
-            email: user.email,
-            role: user.role_id,
-            userId: user.id,
-            avatar: user.profile_picture,
-          },
-        },
-      };
-    } catch (error) {
-      return { EM: "Lỗi hệ thống: " + error.message, EC: -3, DT: [] };
-    }
+      },
+    };
+  } catch (error) {
+    return { EM: "Lỗi hệ thống: " + error.message, EC: -3, DT: [] };
   }
+}
+
 
   async logout(refreshToken) {
     try {
@@ -253,7 +266,6 @@ class UserService {
       return { EM: "Lỗi hệ thống, vui lòng thử lại sau.", EC: -1 };
     }
   }
-
   async changePassword(userId, oldPassword, newPassword) {
     try {
       const user = await db.users.findByPk(userId);
@@ -315,7 +327,7 @@ class UserService {
     } catch (error) {
       return {
         EM: "Lỗi hệ thống : " + error.message,
-        EC: -1,
+        EC: -2,
         DT: [],
       };
     }

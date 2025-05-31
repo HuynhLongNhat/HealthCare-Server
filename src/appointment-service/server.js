@@ -5,6 +5,8 @@ import cors from "cors";
 import swaggerUi from "swagger-ui-express";
 import { specs } from "./config/swagger";
 import appointmentRoutes from "./routes/appointmentRoutes"
+import diagnosisRoutes from "./routes/diagnosisRoutes"
+import prescriptionsRoutes from "./routes/prescriptionsRoutes";
 const app = express();
 const APPOINTMENT_SERVICE_PORT = process.env.APPOINTMENT_SERVICE_PORT || 8003;
 
@@ -33,6 +35,9 @@ app.use((req, res, next) => {
 
 // Routes
 app.use("/api/appointments", appointmentRoutes);
+app.use("/api/appointments", diagnosisRoutes);
+app.use("/api/appointments", prescriptionsRoutes);
+
 
 // Swagger UI
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
