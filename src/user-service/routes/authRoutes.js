@@ -2,7 +2,8 @@ const express = require("express");
 const passport = require("passport");
 const jwt = require("jsonwebtoken");
 const db = require("../models/index");
-
+import dotenv from "dotenv";
+dotenv.config();
 const router = express.Router();
 
 // Helper function to generate JWT token
@@ -35,12 +36,12 @@ router.get(
 router.get(
   "/google/callback",
   passport.authenticate("google", {
-    failureRedirect: "http://localhost:5173/login",
+    failureRedirect: `${process.env.FRONTEND_URL}/login`,
     session: false,
   }),
   (req, res) => {
     const token = generateToken(req.user);
-    res.redirect(`http://localhost:5173/login?token=${token}`);
+    res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}`);
   }
 );
 

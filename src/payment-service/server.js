@@ -11,7 +11,7 @@ const PAYMENT_SERVICE_PORT = process.env.PAYMENT_SERVICE_PORT || 8004;
 // Cấu hình CORS mới
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "http://localhost:5173 ,https://health-care-client-nine.vercel.app/",
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Accept"],
     credentials: true,
