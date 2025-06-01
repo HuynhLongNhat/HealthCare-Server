@@ -36,12 +36,12 @@ router.get(
 router.get(
   "/google/callback",
   passport.authenticate("google", {
-    failureRedirect: `${process.env.FRONTEND_URL}/login`,
+    failureRedirect: `${process.env.FRONTEND_ROOT_URL}/login`,
     session: false,
   }),
   (req, res) => {
     const token = generateToken(req.user);
-    res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}`);
+    res.redirect(`${process.env.FRONTEND_ROOT_URL}/login?token=${token}`);
   }
 );
 
@@ -113,12 +113,12 @@ router.get(
 router.get(
   "/facebook/callback",
   passport.authenticate("facebook", {
-    failureRedirect: `${process.env.FRONTEND_URL}/login`,
+    failureRedirect: `${process.env.FRONTEND_ROOT_URL}/login`,
     session: false,
   }),
   (req, res) => {
     const token = generateToken(req.user);
-     res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}`);
+     res.redirect(`${process.env.FRONTEND_ROOT_URL}/login?token=${token}`);
   }
 );
 
