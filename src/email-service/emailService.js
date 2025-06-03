@@ -50,58 +50,76 @@ const sendEmail = async (to, subject, html) => {
 
 const sendPasswordResetEmail = async (email, resetToken) => {
   try {
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_ROOT_URL}/reset-password?token=${resetToken}`;
     const html = `
       <div style="
-        font-family: Arial, sans-serif;
-        color: #333;
-        line-height: 1.5;
-        max-width: 600px;
-        margin: 0 auto;
-        padding: 20px;
-        background: #f9f9f9;
-        border: 1px solid #eee;
-        border-radius: 8px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f4f6f8;
+        padding: 40px 0;
       ">
-        <h1 style="text-align: center; color: #4a90e2;">
-          Yêu cầu đặt lại mật khẩu
-        </h1>
-        <p>Xin chào,</p>
-        <p>Bạn (hoặc ai đó) vừa yêu cầu đặt lại mật khẩu cho tài khoản của bạn.</p>
-        <p style="text-align: center; margin: 24px 0;">
-          <a href="${resetUrl}"
-             style="
-               display: inline-block;
-               padding: 12px 24px;
-               background: #4a90e2;
-               color: #fff;
-               text-decoration: none;
-               border-radius: 4px;
-               font-weight: bold;
-             ">
-            Đặt lại mật khẩu
-          </a>
-        </p>
-        <p style="font-size: 14px;">
-          Nếu không phải bạn thực hiện yêu cầu này, vui lòng bỏ qua email này.
-        </p>
-        <hr style="
-          border: none;
-          border-top: 1px solid #eee;
-          margin: 24px 0;
-        " />
-        <p style="font-size: 12px; color: #999;">
-          Lưu ý: Liên kết sẽ hết hạn sau 1 giờ.
+        <div style="
+          max-width: 600px;
+          margin: 0 auto;
+          background-color: #ffffff;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+          padding: 30px;
+        ">
+          <h2 style="
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 24px;
+          ">
+            🛡️ Yêu cầu đặt lại mật khẩu
+          </h2>
+
+          <p style="font-size: 16px; color: #333;">
+            Xin chào,
+          </p>
+
+          <p style="font-size: 16px; color: #333;">
+            Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn.
+          </p>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" style="
+              background-color: #4a90e2;
+              color: #fff;
+              text-decoration: none;
+              padding: 14px 28px;
+              border-radius: 6px;
+              font-weight: bold;
+              font-size: 16px;
+              display: inline-block;
+            ">
+              Đặt lại mật khẩu
+            </a>
+          </div>
+
+          <p style="font-size: 14px; color: #555;">
+            Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này. Tài khoản của bạn vẫn an toàn.
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;" />
+
+          <p style="font-size: 12px; color: #999; text-align: center;">
+            Liên kết đặt lại mật khẩu sẽ hết hạn sau 1 giờ vì lý do bảo mật.
+          </p>
+        </div>
+
+        <p style="text-align: center; font-size: 12px; color: #aaa; margin-top: 20px;">
+          © ${new Date().getFullYear()} Your Company. All rights reserved.
         </p>
       </div>
     `;
 
-    return await sendEmail(email, "Yêu cầu đặt lại mật khẩu", html);
+    return await sendEmail(email, "🛡️ Yêu cầu đặt lại mật khẩu", html);
   } catch (error) {
     console.error("Lỗi gửi email đặt lại mật khẩu:", error);
     throw error;
   }
 };
+
 // Gửi cho bệnh nhân và bấc sĩ  về xác nhận đặt lịch
 const sendAppointmentConfirmationEmail = async (
   recipientEmail,

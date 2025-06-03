@@ -101,6 +101,7 @@ class DoctorService {
             as : "doctor_ratings"
           }
         ],
+        order: [["createdAt", "DESC"]],
       });
 
       const doctorDetailsPromises = doctors.map(async (doctor) => {
@@ -1590,13 +1591,13 @@ async getDoctorSchedules(doctorId) {
     }
   }
   async createHealthHandBook(data) {
-    const { title, slug, content, avatar, author_id } = data;
+    const { title, slug, content, image, author_id } = data;
     try {
       const newHandbook = await db.health_handbook.create({
         title,
         slug,
         content,
-        avatar,
+        image,
         author_id,
       });
       return {
