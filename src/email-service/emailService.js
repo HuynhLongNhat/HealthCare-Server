@@ -50,7 +50,7 @@ const sendEmail = async (to, subject, html) => {
 
 const sendPasswordResetEmail = async (email, resetToken) => {
   try {
-    const resetUrl = `${process.env.FRONTEND_ROOT_URL}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
     const html = `
       <div style="
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
