@@ -1,4 +1,4 @@
-import userService from "../services/userService";
+import userService from "../services/user.service";
 
 const userController = {
   // Auth Controllers
@@ -182,8 +182,8 @@ const userController = {
   // Profile Controllers
   getProfile: async (req, res) => {
     try {
-      const userId = req.params.userId;
-      const profile = await userService.getUserProfile(userId);
+      const username = req.params.username;
+      const profile = await userService.getUserProfile(username);
       return res.status(200).json({
         EM: profile.EM,
         EC: profile.EC,

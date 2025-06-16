@@ -236,8 +236,6 @@ class UserService {
     return { EM: "Lỗi hệ thống: " + error.message, EC: -3, DT: [] };
   }
 }
-
-
   async logout(refreshToken) {
     try {
       if (!refreshToken) {
@@ -303,7 +301,6 @@ class UserService {
       };
     }
   }
-
   async forgotPassword(email) {
     try {
       const user = await db.users.findOne({ where: { email } });
@@ -332,7 +329,6 @@ class UserService {
       };
     }
   }
-
   async resetPassword(token, newPassword) {
     try {
       // Verify token
@@ -365,11 +361,11 @@ class UserService {
       throw new Error("Không thể cập nhật mật khẩu: " + error.message);
     }
   }
-
-  async getUserProfile(userId) {
+  async getUserProfile(username) {
     try {
+    
       const profile = await db.users.findOne({
-        where: { id: userId },
+        where: { username: username },
         attributes: { exclude: ["password"] },
       });
 
@@ -573,7 +569,7 @@ class UserService {
         email: email || null,
         full_name: fullname || null,
         phone_number: phone || null,
-        is_verified: false,
+        is_verified: true,
         address: address || null,
         profile_picture: null,
         dob: null,
